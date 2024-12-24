@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "ts-node src/index.ts",
-    "lint": "eslint",
+    "lint": "eslint 'src/**/*.ts' --fix",
     "prettier": "prettier 'src/**/*.ts' --write --list-different",
     "prepare": "husky"
   },
