@@ -12,7 +12,7 @@
   "license": "MIT",
   "dependencies": {
     "@bithive/relayer-api": "^0.0.7",
-    "@okxweb3/coin-bitcoin": "1.0.37-beta.4",
+    "@okxweb3/coin-bitcoin": "^1.0.37",
     "bitcoinjs-lib": "^6.1.7",
     "dotenv": "^16.4.5",
     "ecpair": "^2.1.0",

@@ -111,6 +111,3 @@ dataset/local
 
 # JetBrains IDE
 .idea
-
-# Test cache
-test/__cache__

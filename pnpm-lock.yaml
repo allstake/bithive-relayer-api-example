@@ -12,8 +12,8 @@ importers:
         specifier: ^0.0.7
         version: 0.0.7(@trpc/server@10.45.2)
       '@okxweb3/coin-bitcoin':
-        specifier: 1.0.37-beta.4
-        version: 1.0.37-beta.4(@okxweb3/coin-base@1.0.12-beta.4)(@okxweb3/crypto-lib@1.0.7-beta.4)
+        specifier: ^1.0.37
+        version: 1.0.37(@okxweb3/coin-base@1.0.12-beta.4(@okxweb3/crypto-lib@1.0.7-beta.4))(@okxweb3/crypto-lib@1.0.7-beta.4)
       bitcoinjs-lib:
         specifier: ^6.1.7
         version: 6.1.7
@@ -196,11 +196,11 @@ packages:
     peerDependencies:
       '@okxweb3/crypto-lib': 1.0.7-beta.4
 
-  '@okxweb3/coin-bitcoin@1.0.37-beta.4':
-    resolution: {integrity: sha512-A7J/S0VoQglXZIqV6Kml1xxFJP6jvC32I3mkoOei3Gy4Yy8CDHDIee+F2dpwiXeNpXlkX+modOAx8vh+S8z8qA==}
+  '@okxweb3/coin-bitcoin@1.0.37':
+    resolution: {integrity: sha512-yQsSVlE6+4jET2qIxH6lcct41MjayIVUxxtkD7UFh6JSKQh9Mk0/u+7U2tWcuYcmbWVOEz3bc1D/kqPZ/MawfQ==}
     peerDependencies:
-      '@okxweb3/coin-base': 1.0.12-beta.4
-      '@okxweb3/crypto-lib': 1.0.7-beta.4
+      '@okxweb3/coin-base': 1.0.12-beta.0
+      '@okxweb3/crypto-lib': 1.0.7-beta.0
 
   '@okxweb3/crypto-lib@1.0.7-beta.4':
     resolution: {integrity: sha512-cD/BZOT8AY4VdFCxfqI8MAumOVnjMKx3YZA7Xcsp6ggAtelZNADK+ps7ZGJnxmScRqwtV7Y8P4WhOjdTWG6AvQ==}
@@ -1842,7 +1842,7 @@ snapshots:
     dependencies:
       '@okxweb3/crypto-lib': 1.0.7-beta.4
 
-  '@okxweb3/coin-bitcoin@1.0.37-beta.4(@okxweb3/coin-base@1.0.12-beta.4)(@okxweb3/crypto-lib@1.0.7-beta.4)':
+  '@okxweb3/coin-bitcoin@1.0.37(@okxweb3/coin-base@1.0.12-beta.4(@okxweb3/crypto-lib@1.0.7-beta.4))(@okxweb3/crypto-lib@1.0.7-beta.4)':
     dependencies:
       '@cat-protocol/cat-smartcontracts': 0.2.8
       '@cmdcode/tapscript': 1.4.6
@@ -1954,7 +1954,7 @@ snapshots:
     dependencies:
       undici-types: 6.20.0
 
-  '@typescript-eslint/eslint-plugin@8.18.2(@typescript-eslint/parser@8.18.2)(eslint@9.17.0)(typescript@5.7.2)':
+  '@typescript-eslint/eslint-plugin@8.18.2(@typescript-eslint/parser@8.18.2(eslint@9.17.0)(typescript@5.7.2))(eslint@9.17.0)(typescript@5.7.2)':
     dependencies:
       '@eslint-community/regexpp': 4.12.1
       '@typescript-eslint/parser': 8.18.2(eslint@9.17.0)(typescript@5.7.2)
@@ -3380,7 +3380,7 @@ snapshots:
 
   typescript-eslint@8.18.2(eslint@9.17.0)(typescript@5.7.2):
     dependencies:
-      '@typescript-eslint/eslint-plugin': 8.18.2(@typescript-eslint/parser@8.18.2)(eslint@9.17.0)(typescript@5.7.2)
+      '@typescript-eslint/eslint-plugin': 8.18.2(@typescript-eslint/parser@8.18.2(eslint@9.17.0)(typescript@5.7.2))(eslint@9.17.0)(typescript@5.7.2)
       '@typescript-eslint/parser': 8.18.2(eslint@9.17.0)(typescript@5.7.2)
       '@typescript-eslint/utils': 8.18.2(eslint@9.17.0)(typescript@5.7.2)
       eslint: 9.17.0
@@ -3404,7 +3404,7 @@ snapshots:
 
   util@0.12.5:
     dependencies:
-      inherits: 2.0.3
+      inherits: 2.0.4
       is-arguments: 1.2.0
       is-generator-function: 1.0.10
       is-typed-array: 1.1.15

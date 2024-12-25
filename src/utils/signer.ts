@@ -15,10 +15,10 @@ export type SignPsbtOptions = {
   }[];
 };
 
-export type BitcoinProvider = {
+export interface BitcoinProvider {
   signPsbt: (psbt: string, options?: SignPsbtOptions) => string;
   signMessage: (message: string, signatureType?: SignatureType) => string;
-};
+}
 
 export class BitcoinSigner implements BitcoinProvider {
   keyPair: ECPairInterface;
@@ -37,6 +37,18 @@ export class BitcoinSigner implements BitcoinProvider {
     return new BitcoinSigner(keyPair);
   }
 
+  static fromRandom(network: bitcoin.Network): BitcoinSigner {
+    const ECPair = ECPairFactory(ecc);
+    const keyPair = ECPair.makeRandom({
+      network,
+    });
+    return new BitcoinSigner(keyPair);
+  }
+
+  toWif(): string {
+    return this.keyPair.toWIF();
+  }
+
   getPrivateKeyRaw(): Buffer {
     if (!this.keyPair.privateKey) {
       throw Error('Private key not found');
@@ -44,24 +56,16 @@ export class BitcoinSigner implements BitcoinProvider {
     return this.keyPair.privateKey;
   }
 
-  getPrivateKeyHex(): string {
+  getPrivateKey(): string {
     return this.getPrivateKeyRaw().toString('hex');
-  }
-
-  getPrivateKeyWif(): string {
-    return this.keyPair.toWIF();
   }
 
   getPublicKeyRaw(): Buffer {
     return this.keyPair.publicKey;
   }
 
-  getPublicKeyHex(): string {
-    return this.getPublicKeyRaw().toString('hex');
-  }
-
   getPublicKey(): string {
-    return this.getPublicKeyHex();
+    return this.getPublicKeyRaw().toString('hex');
   }
 
   getAddress(addressType: AddressType = 'NativeSegwit'): string {
