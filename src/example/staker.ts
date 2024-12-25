@@ -3,6 +3,11 @@ import { config } from '../utils/config';
 import { BitcoinSigner } from '../utils/signer';
 import { BitHiveStaker } from '../utils/staker';
 
+/**
+ * Stake and unstake BTC with BitHive Staker.
+ *
+ * Run with `pnpm start staker`
+ */
 export async function run() {
   // Initialize a Bitcoin signer
   const signer = BitcoinSigner.fromWif(

@@ -1,3 +1,4 @@
+import { satToBtc, txUrl } from './helper';
 import {
   stake,
   unstake,
@@ -15,30 +16,56 @@ export class BitHiveStaker {
     this.signer = signer;
   }
 
-  async stake(amount: number, wait: boolean = true) {
+  async stake(
+    amount: number,
+    options?: { fee?: number; feeRate?: number; wait?: boolean },
+  ) {
     const publicKey = this.signer.getPublicKey();
     const address = this.signer.getAddress();
-    const txHash = await stake(this.signer, publicKey, address, amount);
-    if (wait) {
+    console.log(`Staking ${satToBtc(amount)} BTC...`);
+    const txHash = await stake(this.signer, publicKey, address, amount, {
+      fee: options?.fee,
+      feeRate: options?.feeRate,
+    });
+    console.log(`Staking transaction broadcasted: ${txUrl(txHash)}`);
+    if (options?.wait !== false) {
       await waitUntilStaked(publicKey, txHash);
     }
     return txHash;
   }
 
-  async unstake(depositTxHash: string, wait: boolean = true) {
+  async unstake(depositTxHash: string, options?: { wait?: boolean }) {
     const publicKey = this.signer.getPublicKey();
+    console.log('Unstaking BTC...');
     await unstake(this.signer, publicKey, depositTxHash);
-    if (wait) {
+    if (options?.wait !== false) {
       await waitUntilUnstaked(publicKey, depositTxHash);
     }
   }
 
-  async withdraw(depositTxHash: string, wait: boolean = true) {
+  async withdraw(
+    depositTxHash: string,
+    options?: { fee?: number; feeRate?: number; wait?: boolean },
+  ) {
     const publicKey = this.signer.getPublicKey();
     const address = this.signer.getAddress();
-    await withdraw(this.signer, publicKey, address, depositTxHash);
-    if (wait) {
+    console.log('Withdrawing BTC...');
+    const withdrawalTxHash = await withdraw(
+      this.signer,
+      publicKey,
+      address,
+      depositTxHash,
+      {
+        fee: options?.fee,
+        feeRate: options?.feeRate,
+      },
+    );
+    console.log(
+      `Withdrawal transaction broadcasted: ${txUrl(withdrawalTxHash)}`,
+    );
+    if (options?.wait !== false) {
       await waitUntilWithdrawn(publicKey, depositTxHash);
     }
+    return withdrawalTxHash;
   }
 }

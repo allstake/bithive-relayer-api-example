@@ -1,13 +1,10 @@
 import { createRelayerClient } from '@bithive/relayer-api';
 import { config } from './config';
 import { BitcoinProvider } from './signer';
+import { sleep } from './helper';
 
 // Create a relayer client
 export const relayer = createRelayerClient({ url: config.relayerRpcUrl });
-
-async function sleep(ms: number) {
-  await new Promise<void>((resolve) => setTimeout(resolve, ms));
-}
 
 /**
  * Stake BTC to BitHive
@@ -19,6 +16,7 @@ async function sleep(ms: number) {
  * - Taproot       (P2TR)
  * - Legacy        (P2PKH)
  * @param amount Bitcoin amount (in sats) that is within the valid scope. e.g. between 0.00005 and 0.01 BTC. 5000 means 0.00005 BTC
+ * @param options Optional: specify the fee (in sats) or fee rate (in sat/vB) for the staking transaction. If not specified, the fee will be calculated automatically.
  * @returns Staking tx hash
  */
 export async function stake(
@@ -26,6 +24,10 @@ export async function stake(
   publicKey: string,
   address: string,
   amount: number,
+  options?: {
+    fee?: number;
+    feeRate?: number;
+  },
 ) {
   if (provider.signPsbt) {
     // 1. Build the PSBT that is ready for signing
@@ -33,7 +35,7 @@ export async function stake(
       publicKey,
       address,
       amount,
-      // Optional: specify `fee` or `feeRate` here if needed
+      ...options,
     });
 
     // 2. Sign and finalize the PSBT with wallet
@@ -115,6 +117,7 @@ export async function unstake(
  * @param publicKey User public key (compressed)
  * @param address Recipient address (can be different with user address)
  * @param depositTxHash Deposit tx hash
+ * @param options Optional: specify the fee (in sats) or fee rate (in sat/vB) for the withdrawal transaction. If not specified, the fee will be calculated automatically.
  * @returns Withdrawal tx hash
  */
 export async function withdraw(
@@ -122,6 +125,10 @@ export async function withdraw(
   publicKey: string,
   address: string,
   depositTxHash: string,
+  options?: {
+    fee?: number;
+    feeRate?: number;
+  },
 ) {
   // Get the deposit by public key and deposit tx hash
   const { deposit } = await relayer.user.getDeposit({
@@ -155,7 +162,7 @@ export async function withdraw(
         vout: withdrawableDeposit.depositVout,
       })),
       recipientAddress: address,
-      // Optional: specify `fee` or `feeRate` here if needed
+      ...options,
     });
 
     // 2. Sign the PSBT with wallet. Don't finalize it.
