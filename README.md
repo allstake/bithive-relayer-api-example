@@ -1,6 +1,6 @@
-# bithive-relayer-api-example
+# BitHive Relayer API Examples
 
-BitHive Relayer API Examples. The examples are written in TypeScript and use the BitHive Relayer API to stake and unstake BTC with BitHive.
+Stake and unstake BTC with BitHive Relayer API.
 
 Find more details about BitHive Bitcoin staking protocol in the [docs](https://docs.bithive.fi/introduction/bitcoin-staking).
 
