@@ -22,6 +22,15 @@ export class BitHiveStaker {
     this.signer = signer;
   }
 
+  /**
+   * Stake BTC
+   * @param amount BTC amount (in sats)
+   * @param options Staking options
+   *  - fee: Specify the fee (in sats) for the staking transaction. If not specified, the fee will be calculated automatically.
+   *  - feeRate: Specify the fee rate (in sat/vB) for the staking transaction. If not specified, the fee will be calculated automatically.
+   *  - wait: Specify whether to wait for the staking transaction to be confirmed. If not specified, the function will wait for the staking transaction to be confirmed.
+   * @returns Deposit tx hash
+   */
   async stake(amount: number, { fee, feeRate, wait = true }: TxOptions = {}) {
     const publicKey = this.signer.getPublicKey();
     const address = this.signer.getAddress();
@@ -40,6 +49,13 @@ export class BitHiveStaker {
     return txHash;
   }
 
+  /**
+   * Unstake BTC
+   * @param depositTxHash Deposit tx hash
+   * @param options Unstaking options
+   *  - wait: Specify whether to wait for the unstaking transaction to be confirmed. If not specified, the function will wait for the unstaking transaction to be confirmed.
+   * @returns Unstaking tx hash
+   */
   async unstake(
     depositTxHash: string,
     { wait = true }: { wait?: boolean } = {},
@@ -54,6 +70,15 @@ export class BitHiveStaker {
     }
   }
 
+  /**
+   * Withdraw BTC
+   * @param depositTxHash Deposit tx hash
+   * @param options Withdrawal options
+   *  - fee: Specify the fee (in sats) for the withdrawal transaction. If not specified, the fee will be calculated automatically.
+   *  - feeRate: Specify the fee rate (in sat/vB) for the withdrawal transaction. If not specified, the fee will be calculated automatically.
+   *  - wait: Specify whether to wait for the withdrawal transaction to be confirmed. If not specified, the function will wait for the withdrawal transaction to be confirmed.
+   * @returns Withdrawal tx hash
+   */
   async withdraw(
     depositTxHash: string,
     { fee, feeRate, wait = true }: TxOptions = {},
