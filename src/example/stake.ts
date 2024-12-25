@@ -28,5 +28,8 @@ export async function run() {
 
   // List all deposits of the user
   const deposits = await listDeposits(publicKey);
-  console.log(`List deposits of user (${publicKey}):`, deposits);
+  console.log(
+    `List ${deposits.length} deposits of user (${publicKey}):`,
+    deposits,
+  );
 }

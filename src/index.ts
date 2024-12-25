@@ -3,6 +3,7 @@ import { run as stake } from './example/stake';
 import { run as unstake } from './example/unstake';
 import { run as fee } from './example/fee';
 import { run as staker } from './example/staker';
+import { run as deposits } from './example/deposits';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -16,6 +17,8 @@ async function main() {
     await fee();
   } else if (example === 'staker') {
     await staker();
+  } else if (example === 'deposits') {
+    await deposits();
   } else {
     console.error('Invalid example');
   }

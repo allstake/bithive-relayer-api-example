@@ -25,7 +25,7 @@ export async function run() {
   // List all deposits of the staker
   const deposits = await staker.deposits();
   console.log(
-    `List deposits of staker (${staker.signer.getPublicKey()}): `,
+    `Staker (${staker.signer.getPublicKey()}) has ${deposits.length} deposits: `,
     deposits,
   );
 }

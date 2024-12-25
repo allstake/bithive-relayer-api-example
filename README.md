@@ -38,6 +38,14 @@ Example code: [unstake.ts](./src/example/unstake.ts)
 pnpm start unstake
 ```
 
+### List deposits of a user
+
+Example code: [deposits.ts](./src/example/deposits.ts)
+
+```bash
+pnpm start deposits
+```
+
 ### Stake and unstake 0.00005 BTC with a custom fee
 
 Example code: [fee.ts](./src/example/fee.ts)
