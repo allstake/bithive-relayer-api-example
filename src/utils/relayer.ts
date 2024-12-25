@@ -3,6 +3,14 @@ import { config } from './config';
 import { BitcoinProvider } from './signer';
 import { sleep } from './helper';
 
+export type WaitOptions = {
+  timeout?: number;
+};
+
+// Default wait interval and timeout
+const DEFAULT_WAIT_INTERVAL = 2 * 60 * 1000; // 2 minutes
+const DEFAULT_WAIT_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+
 // Create a relayer client
 export const relayer = createRelayerClient({ url: config.relayerRpcUrl });
 
@@ -58,7 +66,6 @@ export async function stake(
  * @param provider BTC provider with `signMessage` interface
  * @param publicKey User public key (compressed)
  * @param depositTxHash Deposit tx hash
- * @returns Unstaking tx hash
  */
 export async function unstake(
   provider: BitcoinProvider,
@@ -203,8 +210,16 @@ export async function withdraw(
 export async function waitUntilStaked(
   publicKey: string,
   depositTxHash: string,
+  { timeout = DEFAULT_WAIT_TIMEOUT }: WaitOptions = {},
 ) {
+  const startTime = Date.now();
   while (true) {
+    if (Date.now() - startTime > timeout) {
+      throw Error(
+        `Waiting timeout ${timeout} ms reached for staking (${depositTxHash})`,
+      );
+    }
+
     // Get deposit by public key and deposit tx hash
     const { deposit } = await relayer.user.getDeposit({
       publicKey,
@@ -221,7 +236,7 @@ export async function waitUntilStaked(
       console.log(
         `Staking (${depositTxHash}) is under processing... Waiting for 2 minutes...`,
       );
-      await sleep(2 * 60 * 1000);
+      await sleep(DEFAULT_WAIT_INTERVAL);
     } else {
       throw Error(
         `Invalid status (${depositStatus}) for staking (${depositTxHash})`,
@@ -238,8 +253,16 @@ export async function waitUntilStaked(
 export async function waitUntilUnstaked(
   publicKey: string,
   depositTxHash: string,
+  { timeout = DEFAULT_WAIT_TIMEOUT }: WaitOptions = {},
 ) {
+  const startTime = Date.now();
   while (true) {
+    if (Date.now() - startTime > timeout) {
+      throw Error(
+        `Waiting timeout ${timeout} ms reached for unstaking deposit (${depositTxHash})`,
+      );
+    }
+
     // Get deposit by public key and deposit tx hash
     const { deposit } = await relayer.user.getDeposit({
       publicKey,
@@ -254,7 +277,7 @@ export async function waitUntilUnstaked(
       console.log(
         `Unstaking (${depositTxHash}) is under processing... Waiting for 2 minutes...`,
       );
-      await sleep(2 * 60 * 1000);
+      await sleep(DEFAULT_WAIT_INTERVAL);
     } else {
       throw Error(
         `Invalid status (${depositStatus}) for unstaking (${depositTxHash})`,
@@ -271,8 +294,16 @@ export async function waitUntilUnstaked(
 export async function waitUntilWithdrawn(
   publicKey: string,
   depositTxHash: string,
+  { timeout = DEFAULT_WAIT_TIMEOUT }: WaitOptions = {},
 ) {
+  const startTime = Date.now();
   while (true) {
+    if (Date.now() - startTime > timeout) {
+      throw Error(
+        `Waiting timeout ${timeout} ms reached for withdrawing deposit (${depositTxHash})`,
+      );
+    }
+
     // Get deposit by public key and deposit tx hash
     const { deposit } = await relayer.user.getDeposit({
       publicKey,
@@ -287,7 +318,7 @@ export async function waitUntilWithdrawn(
       console.log(
         `Withdrawal (${depositTxHash}) is under processing... Waiting for 2 minutes...`,
       );
-      await sleep(2 * 60 * 1000);
+      await sleep(DEFAULT_WAIT_INTERVAL);
     } else {
       throw Error(
         `Invalid status (${depositStatus}) for Withdrawal (${depositTxHash})`,
