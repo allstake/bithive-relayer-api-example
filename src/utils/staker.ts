@@ -40,7 +40,7 @@ export class BitHiveStaker {
       fee,
       feeRate,
     });
-    console.log(`Staking transaction broadcasted: ${txUrl(txHash)}`);
+    console.log(`Staking transaction has been broadcast: ${txUrl(txHash)}`);
 
     if (wait) {
       await waitUntilStaked(publicKey, txHash);
@@ -98,7 +98,7 @@ export class BitHiveStaker {
       },
     );
     console.log(
-      `Withdrawal transaction broadcasted: ${txUrl(withdrawalTxHash)}`,
+      `Withdrawal transaction has been broadcast: ${txUrl(withdrawalTxHash)}`,
     );
 
     if (wait) {
