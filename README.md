@@ -14,18 +14,12 @@ pnpm install
 
 ### Prerequisites
 
-Add your Bitcoin private key to the `.env` file. Use `.env.example` as a reference.
+Add your Bitcoin private key to the `.env` file with `BITCOIN_WIF_PRIVATE_KEY` key. Use `.env.example` as a reference.
 
 The default network is `testnet4`. You can change it to any other network supported by BitHive Relayer.
 
 ```bash
 cp .env.example .env
-```
-
-```env
-BITCOIN_NETWORK=testnet4
-BITCOIN_WIF_PRIVATE_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-BITHIVE_RELAYER_RPC_URL=https://relayer-testnet4.bithive.fi
 ```
 
 ### Stake 0.00005 BTC
