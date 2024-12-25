@@ -6,6 +6,11 @@ Find more details about BitHive Bitcoin staking protocol in the [docs](https://d
 
 ## Install
 
+Environment requirements:
+
+- Node.js version >= 20.0.0
+- pnpm version >= 9.0.0
+
 ```bash
 pnpm install
 ```
