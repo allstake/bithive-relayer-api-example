@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "BitHive Relayer API example",
   "main": "index.js",
+  "private": true,
   "scripts": {
     "start": "ts-node src/index.ts",
     "lint": "eslint 'src/**/*.ts' --fix",
