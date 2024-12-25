@@ -46,7 +46,7 @@ Example code: [fee.ts](./src/example/fee.ts)
 pnpm start fee
 ```
 
-### Stake and unstake 0.00005 BTC with BitHive Staker with more readable code
+### Stake and unstake 0.00005 BTC with more readable code
 
 Example code: [staker.ts](./src/example/staker.ts)
 
