@@ -22,4 +22,10 @@ export async function run() {
   await staker.unstake(txHash);
   // Withdraw the unstaked BTC
   await staker.withdraw(txHash);
+  // List all deposits of the staker
+  const deposits = await staker.deposits();
+  console.log(
+    `List deposits of staker (${staker.signer.getPublicKey()}): `,
+    deposits,
+  );
 }

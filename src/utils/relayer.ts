@@ -295,3 +295,15 @@ export async function waitUntilWithdrawn(
     }
   }
 }
+
+/**
+ * List all deposits of the user
+ * @param publicKey User public key (compressed)
+ * @returns List of deposits
+ */
+export async function listDeposits(publicKey: string) {
+  const { deposits } = await relayer.user.getDeposits({
+    publicKey,
+  });
+  return deposits;
+}

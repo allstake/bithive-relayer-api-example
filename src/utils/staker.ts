@@ -1,5 +1,6 @@
 import { satToBtc, txUrl } from './helper';
 import {
+  listDeposits,
   stake,
   unstake,
   waitUntilStaked,
@@ -106,5 +107,14 @@ export class BitHiveStaker {
     }
 
     return withdrawalTxHash;
+  }
+
+  /**
+   * List all deposits of the staker
+   * @returns List of deposits
+   */
+  async deposits() {
+    const publicKey = this.signer.getPublicKey();
+    return listDeposits(publicKey);
   }
 }

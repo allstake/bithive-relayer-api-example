@@ -1,6 +1,6 @@
 import * as bitcoin from 'bitcoinjs-lib';
 import { config } from '../utils/config';
-import { stake, waitUntilStaked } from '../utils/relayer';
+import { listDeposits, stake, waitUntilStaked } from '../utils/relayer';
 import { BitcoinSigner } from '../utils/signer';
 import { txUrl } from '../utils/helper';
 
@@ -25,4 +25,8 @@ export async function run() {
   const txHash = await stake(signer, publicKey, address, amount);
   await waitUntilStaked(publicKey, txHash);
   console.log('Staked BTC confirmed', txUrl(txHash));
+
+  // List all deposits of the user
+  const deposits = await listDeposits(publicKey);
+  console.log(`List deposits of user (${publicKey}):`, deposits);
 }
