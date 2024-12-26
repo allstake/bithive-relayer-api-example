@@ -61,7 +61,7 @@ export class BitHiveStaker {
 
   /**
    * Unstake BTC
-   * @param depositTxHash Deposit tx hash
+   * @param deposits A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout
    * @param options Unstaking options
    *  - wait: Specify whether to wait for the unstaking transaction to be confirmed. If not specified, the function will wait for the unstaking transaction to be confirmed.
    *  - timeout: Specify the timeout (in milliseconds) for waiting for unstaking transaction confirmation. The default timeout is 30 minutes.
