@@ -271,7 +271,7 @@ export async function waitUntilStaked(
       _deposits = pendingDeposits;
       await sleep(DEFAULT_WAIT_INTERVAL);
     } else {
-      console.log(`All deposits have been processed.`);
+      console.log(`All deposits staking have been processed.`);
       console.log(
         `Success: ${count.success}, Failure: ${count.failure}, Invalid: ${count.invalid}`,
       );
@@ -347,7 +347,7 @@ export async function waitUntilUnstaked(
       _deposits = pendingDeposits;
       await sleep(DEFAULT_WAIT_INTERVAL);
     } else {
-      console.log(`All deposits have been processed.`);
+      console.log(`All deposits unstaking have been processed.`);
       console.log(`Success: ${count.success}, Invalid: ${count.invalid}`);
       break;
     }
@@ -427,7 +427,7 @@ export async function waitUntilWithdrawn(
       _deposits = pendingDeposits;
       await sleep(DEFAULT_WAIT_INTERVAL);
     } else {
-      console.log(`All deposits have been processed.`);
+      console.log(`All deposits withdrawal have been processed.`);
       console.log(
         `Success: ${count.success}, Failure: ${count.failure}, Invalid: ${count.invalid}`,
       );
