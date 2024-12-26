@@ -1,5 +1,6 @@
 import { satToBtc, txUrl } from './helper';
 import {
+  Deposits,
   listDeposits,
   stake,
   unstake,
@@ -67,22 +68,22 @@ export class BitHiveStaker {
    * @returns Unstaking tx hash
    */
   async unstake(
-    depositTxHash: string,
+    deposits: Deposits,
     { wait = true, timeout }: TxWaitOptions = {},
   ) {
     const publicKey = this.signer.getPublicKey();
 
     console.log('Unstaking BTC...');
-    await unstake(this.signer, publicKey, depositTxHash);
+    await unstake(this.signer, publicKey, deposits);
 
     if (wait) {
-      await waitUntilUnstaked(publicKey, depositTxHash, { timeout });
+      await waitUntilUnstaked(publicKey, deposits, { timeout });
     }
   }
 
   /**
    * Withdraw BTC
-   * @param depositTxHash Deposit tx hash
+   * @param deposits A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout
    * @param options Withdrawal options
    *  - fee: Specify the fee (in sats) for the withdrawal transaction. If not specified, the fee will be calculated automatically.
    *  - feeRate: Specify the fee rate (in sat/vB) for the withdrawal transaction. If not specified, the fee will be calculated automatically.
@@ -91,7 +92,7 @@ export class BitHiveStaker {
    * @returns Withdrawal tx hash
    */
   async withdraw(
-    depositTxHash: string,
+    deposits: Deposits,
     { fee, feeRate, wait = true, timeout }: TxOptions = {},
   ) {
     const publicKey = this.signer.getPublicKey();
@@ -102,7 +103,7 @@ export class BitHiveStaker {
       this.signer,
       publicKey,
       address,
-      depositTxHash,
+      deposits,
       {
         fee,
         feeRate,
@@ -113,7 +114,7 @@ export class BitHiveStaker {
     );
 
     if (wait) {
-      await waitUntilWithdrawn(publicKey, depositTxHash, { timeout });
+      await waitUntilWithdrawn(publicKey, deposits, { timeout });
     }
 
     return withdrawalTxHash;
