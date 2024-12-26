@@ -285,7 +285,7 @@ async function waitForOperation(
   while (true) {
     if (Date.now() - startTime > timeout) {
       throw Error(
-        `Waiting timeout ${timeout} ms reached for ${OPERATION_NAME_MAP[operation].doing} (${deposits})`,
+        `Waiting timeout ${timeout} ms reached for ${OPERATION_NAME_MAP[operation].doing} (${formatDeposits(_deposits)})`,
       );
     }
 
