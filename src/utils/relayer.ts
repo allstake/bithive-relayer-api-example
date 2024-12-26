@@ -1,22 +1,7 @@
-import { createRelayerClient } from '@bithive/relayer-api';
+import { createRelayerClient, UiDepositStatus } from '@bithive/relayer-api';
 import { config } from './config';
 import { BitcoinProvider } from './signer';
 import { sleep } from './helper';
-
-export type WaitOptions = {
-  timeout?: number;
-};
-
-export type Deposit = {
-  txHash: string;
-  vout: number;
-};
-
-export type Deposits = Deposit[] | string | string[];
-
-// Default wait interval and timeout
-const DEFAULT_WAIT_INTERVAL = 2 * 60 * 1000; // 2 minutes
-const DEFAULT_WAIT_TIMEOUT = 60 * 60 * 1000; // 1 hour
 
 // Create a relayer client
 export const relayer = createRelayerClient({ url: config.relayerRpcUrl });
@@ -196,243 +181,205 @@ export async function withdraw(
   return txHash;
 }
 
+export type WaitOptions = {
+  timeout?: number;
+};
+
+export type Deposit = {
+  txHash: string;
+  vout: number;
+};
+
+export type Deposits = Deposit[] | string | string[];
+
+type Operation = 'stake' | 'unstake' | 'withdraw';
+type DepositStatusType = 'success' | 'pending' | 'failure';
+type DepositStatusMap = {
+  [key in Operation]: {
+    [key in DepositStatusType]: UiDepositStatus[];
+  };
+};
+type OperationNameMap = {
+  [key in Operation]: {
+    do: string;
+    doing: string;
+    done: string;
+  };
+};
+
+const DEPOSIT_STATUS_MAP: DepositStatusMap = {
+  stake: {
+    success: ['DepositConfirmed', 'DepositConfirmedInvalid'],
+    pending: ['DepositProcessing'],
+    failure: ['DepositFailed'],
+  },
+  unstake: {
+    success: ['UnstakeConfirmed'],
+    pending: ['UnstakeProcessing'],
+    failure: [],
+  },
+  withdraw: {
+    success: ['WithdrawConfirmed'],
+    pending: ['WithdrawProcessing', 'ChainSignProcessing'],
+    failure: ['WithdrawFailed'],
+  },
+};
+
+const OPERATION_NAME_MAP: OperationNameMap = {
+  stake: {
+    do: 'stake',
+    doing: 'staking',
+    done: 'staked',
+  },
+  unstake: {
+    do: 'unstake',
+    doing: 'unstaking',
+    done: 'unstaked',
+  },
+  withdraw: {
+    do: 'withdraw',
+    doing: 'withdrawing',
+    done: 'withdrawn',
+  },
+};
+
+// Default wait interval and timeout
+const DEFAULT_WAIT_INTERVAL = 2 * 60 * 1000; // 2 minutes
+const DEFAULT_WAIT_TIMEOUT = 60 * 60 * 1000; // 1 hour
+
+/**
+ * Wait until the operation is confirmed
+ * @param operation The operation to wait for
+ * @param publicKey User public key (compressed)
+ * @param deposits A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout
+ * @param options Wait options:
+ *  - timeout: The timeout (in milliseconds) for waiting the operation to be confirmed. Default is 1 hour.
+ */
+async function waitForOperation(
+  operation: Operation,
+  publicKey: string,
+  deposits: Deposits,
+  { timeout = DEFAULT_WAIT_TIMEOUT }: WaitOptions = {},
+) {
+  let _deposits = parseDepositsInput(deposits);
+  const data = await queryDeposits(publicKey, _deposits);
+  if (data.length === 0) {
+    throw Error(`The deposits (${deposits}) are not found`);
+  }
+  const invalidDeposit = data.find(
+    (deposit) =>
+      !DEPOSIT_STATUS_MAP[operation].pending.includes(deposit.status),
+  );
+  if (invalidDeposit) {
+    throw Error(
+      `The deposit (${invalidDeposit.depositTxHash}) with status (${invalidDeposit.status}) hasn't started ${OPERATION_NAME_MAP[operation].doing}`,
+    );
+  }
+
+  const count = {
+    failure: 0,
+    success: 0,
+    invalid: 0,
+  };
+  const startTime = Date.now();
+  while (true) {
+    if (Date.now() - startTime > timeout) {
+      throw Error(
+        `Waiting timeout ${timeout} ms reached for ${OPERATION_NAME_MAP[operation].doing} (${deposits})`,
+      );
+    }
+
+    const pendingDeposits: Deposit[] = [];
+    for (const _deposit of _deposits) {
+      // Get deposit by public key and deposit tx hash and vout
+      const { deposit } = await relayer.user.getDeposit({
+        publicKey,
+        txHash: _deposit.txHash,
+        vout: _deposit.vout,
+      });
+      const depositStatus = deposit.status;
+
+      if (DEPOSIT_STATUS_MAP[operation].success.includes(depositStatus)) {
+        console.log(
+          `Deposit (${formatDeposit(_deposit)}) has been ${OPERATION_NAME_MAP[operation].done} successfully`,
+        );
+        count.success++;
+      } else if (
+        DEPOSIT_STATUS_MAP[operation].pending.includes(depositStatus)
+      ) {
+        pendingDeposits.push(_deposit);
+      } else if (
+        DEPOSIT_STATUS_MAP[operation].failure.includes(depositStatus)
+      ) {
+        console.error(
+          `Deposit (${formatDeposit(_deposit)}) has failed to ${OPERATION_NAME_MAP[operation].do}`,
+        );
+        count.failure++;
+      } else {
+        console.error(
+          `Invalid status (${depositStatus}) for ${OPERATION_NAME_MAP[operation].doing} (${formatDeposit(_deposit)})`,
+        );
+        count.invalid++;
+      }
+    }
+    if (pendingDeposits.length > 0) {
+      console.log(
+        `The deposits ${OPERATION_NAME_MAP[operation].doing} of (${formatDeposits(pendingDeposits)}) ${pendingDeposits.length > 1 ? 'are' : 'is'} under processing... Waiting for 2 minutes...`,
+      );
+      _deposits = pendingDeposits;
+      await sleep(DEFAULT_WAIT_INTERVAL);
+    } else {
+      console.log(
+        `All deposits ${OPERATION_NAME_MAP[operation].doing} have been processed. Success: ${count.success}, Failure: ${count.failure}, Invalid: ${count.invalid}`,
+      );
+      break;
+    }
+  }
+}
+
 /**
  * Wait until the deposit is staked
  * @param publicKey User public key (compressed)
  * @param deposits A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout
+ * @param options Wait options:
+ *  - timeout: The timeout (in milliseconds) for waiting the staking operation to be confirmed. Default is 1 hour.
  */
 export async function waitUntilStaked(
   publicKey: string,
   deposits: Deposits,
   { timeout = DEFAULT_WAIT_TIMEOUT }: WaitOptions = {},
 ) {
-  let _deposits = parseDepositsInput(deposits);
-  const data = await queryDeposits(publicKey, _deposits);
-  if (data.length === 0) {
-    throw Error(`The deposits (${deposits}) are not found`);
-  }
-  const invalidDeposit = data.find(
-    (deposit) => deposit.status !== 'DepositProcessing',
-  );
-  if (invalidDeposit) {
-    throw Error(
-      `The deposit (${invalidDeposit.depositTxHash}) with status (${invalidDeposit.status}) has not been staked`,
-    );
-  }
-
-  const count = {
-    failure: 0,
-    success: 0,
-    invalid: 0,
-  };
-  const startTime = Date.now();
-  while (true) {
-    if (Date.now() - startTime > timeout) {
-      throw Error(
-        `Waiting timeout ${timeout} ms reached for staking (${deposits})`,
-      );
-    }
-
-    const pendingDeposits: Deposit[] = [];
-    for (const _deposit of _deposits) {
-      // Get deposit by public key and deposit tx hash and vout
-      const { deposit } = await relayer.user.getDeposit({
-        publicKey,
-        txHash: _deposit.txHash,
-        vout: _deposit.vout,
-      });
-      const depositStatus = deposit.status;
-
-      if (
-        ['DepositConfirmed', 'DepositConfirmedInvalid'].includes(depositStatus)
-      ) {
-        console.log(
-          `Deposit (${formatDeposits(_deposit)}) has been staked successfully`,
-        );
-        count.success++;
-      } else if (['DepositProcessing'].includes(depositStatus)) {
-        pendingDeposits.push(_deposit);
-      } else if (['DepositFailed'].includes(depositStatus)) {
-        console.error(
-          `Deposit (${formatDeposits(_deposit)}) has failed to stake`,
-        );
-        count.failure++;
-      } else {
-        console.error(
-          `Invalid status (${depositStatus}) for staking (${formatDeposits(_deposit)})`,
-        );
-        count.invalid++;
-      }
-    }
-    if (pendingDeposits.length > 0) {
-      console.log(
-        `Staking (${formatDeposits(pendingDeposits)}) are under processing... Waiting for 2 minutes...`,
-      );
-      _deposits = pendingDeposits;
-      await sleep(DEFAULT_WAIT_INTERVAL);
-    } else {
-      console.log(
-        `All deposits staking have been processed. Success: ${count.success}, Failure: ${count.failure}, Invalid: ${count.invalid}`,
-      );
-      break;
-    }
-  }
+  return waitForOperation('stake', publicKey, deposits, { timeout });
 }
 
 /**
  * Wait until the deposit is unstaked
  * @param publicKey User public key (compressed)
  * @param deposits A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout
+ * @param options Wait options:
+ *  - timeout: The timeout (in milliseconds) for waiting the unstaking operation to be confirmed. Default is 1 hour.
  */
 export async function waitUntilUnstaked(
   publicKey: string,
   deposits: Deposits,
   { timeout = DEFAULT_WAIT_TIMEOUT }: WaitOptions = {},
 ) {
-  let _deposits = parseDepositsInput(deposits);
-  const data = await queryDeposits(publicKey, _deposits);
-  if (data.length === 0) {
-    throw Error(`The deposits (${deposits}) are not found`);
-  }
-  const invalidDeposit = data.find(
-    (deposit) => deposit.status !== 'UnstakeProcessing',
-  );
-  if (invalidDeposit) {
-    throw Error(
-      `The deposit (${invalidDeposit.depositTxHash}) with status (${invalidDeposit.status}) has not been unstaked`,
-    );
-  }
-
-  const count = {
-    success: 0,
-    invalid: 0,
-  };
-  const startTime = Date.now();
-  while (true) {
-    if (Date.now() - startTime > timeout) {
-      throw Error(
-        `Waiting timeout ${timeout} ms reached for unstaking deposit (${deposits})`,
-      );
-    }
-
-    const pendingDeposits: Deposit[] = [];
-    for (const _deposit of _deposits) {
-      // Get deposit by public key and deposit tx hash and vout
-      const { deposit } = await relayer.user.getDeposit({
-        publicKey,
-        txHash: _deposit.txHash,
-        vout: _deposit.vout,
-      });
-      const depositStatus = deposit.status;
-
-      if (['UnstakeConfirmed', 'ChainSignProcessing'].includes(depositStatus)) {
-        console.log(
-          `Deposit (${formatDeposits(_deposit)}) has been unstaked successfully`,
-        );
-        count.success++;
-      } else if (['UnstakeProcessing'].includes(depositStatus)) {
-        pendingDeposits.push(_deposit);
-      } else {
-        console.error(
-          `Invalid status (${depositStatus}) for unstaking (${formatDeposits(_deposit)})`,
-        );
-        count.invalid++;
-      }
-    }
-    if (pendingDeposits.length > 0) {
-      console.log(
-        `Unstaking (${formatDeposits(pendingDeposits)}) are under processing... Waiting for 2 minutes...`,
-      );
-      _deposits = pendingDeposits;
-      await sleep(DEFAULT_WAIT_INTERVAL);
-    } else {
-      console.log(
-        `All deposits unstaking have been processed: Success: ${count.success}, Invalid: ${count.invalid}`,
-      );
-      break;
-    }
-  }
+  return waitForOperation('unstake', publicKey, deposits, { timeout });
 }
 
 /**
  * Wait until the deposit is withdrawn
  * @param publicKey User public key (compressed)
  * @param deposits A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout
+ * @param options Wait options:
+ *  - timeout: The timeout (in milliseconds) for waiting the withdrawal operation to be confirmed. Default is 1 hour.
  */
 export async function waitUntilWithdrawn(
   publicKey: string,
   deposits: Deposits,
   { timeout = DEFAULT_WAIT_TIMEOUT }: WaitOptions = {},
 ) {
-  let _deposits = parseDepositsInput(deposits);
-  const data = await queryDeposits(publicKey, _deposits);
-  if (data.length === 0) {
-    throw Error(`The deposits (${deposits}) are not found`);
-  }
-  const invalidDeposit = data.find(
-    (deposit) => deposit.status !== 'WithdrawProcessing',
-  );
-  if (invalidDeposit) {
-    throw Error(
-      `The deposit (${invalidDeposit.depositTxHash}) with status (${invalidDeposit.status}) has not been withdrawn`,
-    );
-  }
-
-  const count = {
-    failure: 0,
-    success: 0,
-    invalid: 0,
-  };
-  const startTime = Date.now();
-  while (true) {
-    if (Date.now() - startTime > timeout) {
-      throw Error(
-        `Waiting timeout ${timeout} ms reached for withdrawing deposit (${deposits})`,
-      );
-    }
-
-    const pendingDeposits: Deposit[] = [];
-    for (const _deposit of _deposits) {
-      // Get deposit by public key and deposit tx hash and vout
-      const { deposit } = await relayer.user.getDeposit({
-        publicKey,
-        txHash: _deposit.txHash,
-        vout: _deposit.vout,
-      });
-      const depositStatus = deposit.status;
-
-      if (['WithdrawConfirmed'].includes(depositStatus)) {
-        console.log(
-          `Deposit (${formatDeposits(_deposit)}) has been withdrawn successfully`,
-        );
-        count.success++;
-      } else if (['WithdrawProcessing'].includes(depositStatus)) {
-        pendingDeposits.push(_deposit);
-      } else if (['WithdrawFailed'].includes(depositStatus)) {
-        console.error(
-          `Deposit (${formatDeposits(_deposit)}) has failed to withdraw`,
-        );
-        count.failure++;
-      } else {
-        console.error(
-          `Invalid status (${depositStatus}) for withdrawing (${formatDeposits(_deposit)})`,
-        );
-        count.invalid++;
-      }
-    }
-    if (pendingDeposits.length > 0) {
-      console.log(
-        `Withdrawing (${formatDeposits(pendingDeposits)}) are under processing... Waiting for 2 minutes...`,
-      );
-      _deposits = pendingDeposits;
-      await sleep(DEFAULT_WAIT_INTERVAL);
-    } else {
-      console.log(
-        `All deposits withdrawal have been processed. Success: ${count.success}, Failure: ${count.failure}, Invalid: ${count.invalid}`,
-      );
-      break;
-    }
-  }
+  return waitForOperation('withdraw', publicKey, deposits, { timeout });
 }
 
 /**
@@ -489,6 +436,18 @@ async function queryDeposits(publicKey: string, deposits: Deposit[]) {
   return results.map((result) => result.deposit);
 }
 
+function formatDeposit(deposit: Deposit) {
+  if (deposit.vout === 0) {
+    return deposit.txHash;
+  } else {
+    return `${deposit.txHash}:${deposit.vout}`;
+  }
+}
+
 function formatDeposits(deposits: Deposit[] | Deposit) {
-  return JSON.stringify(deposits, null, 2);
+  if (Array.isArray(deposits)) {
+    return deposits.map(formatDeposit).join(', ');
+  } else {
+    return formatDeposit(deposits);
+  }
 }
