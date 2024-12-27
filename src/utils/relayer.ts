@@ -1,4 +1,4 @@
-import { createRelayerClient, UiDepositStatus } from '@bithive/relayer-api';
+import { createRelayerClient, DepositStatus } from '@bithive/relayer-api';
 import { config } from './config';
 import { BitcoinProvider } from './signer';
 import { sleep } from './helper';
@@ -126,7 +126,9 @@ export async function withdraw(
   }
   const invalidDeposit = data.find(
     (deposit) =>
-      !['UnstakeConfirmed', 'ChainSignProcessing'].includes(deposit.status),
+      !['UnstakeConfirmed', 'WithdrawChainSignProcessing'].includes(
+        deposit.status,
+      ),
   );
   if (invalidDeposit) {
     throw Error(
@@ -163,17 +165,12 @@ export async function withdraw(
     throw Error('signPsbt is not supported');
   }
 
-  // 3. Sign the PSBT with NEAR Chain Signatures asynchronously
-  const { id } = await relayer.withdraw.chainSignPsbtAsync({
+  // 3. Sign the PSBT with NEAR Chain Signatures
+  const { psbt: fullySignedPsbt } = await relayer.withdraw.chainSignPsbt({
     psbt: partiallySignedPsbt!,
   });
 
-  // 4. Poll until the PSBT is signed by BitHive contract via NEAR Chain Signatures
-  const { psbt: fullySignedPsbt } = await relayer.withdraw.pollChainSignedPsbt({
-    id,
-  });
-
-  // 5. Submit the finalized PSBT for broadcasting and relaying
+  // 4. Submit the finalized PSBT for broadcasting and relaying
   const { txHash } = await relayer.withdraw.submitFinalizedPsbt({
     psbt: fullySignedPsbt,
   });
@@ -196,7 +193,7 @@ type Operation = 'stake' | 'unstake' | 'withdraw';
 type DepositStatusType = 'success' | 'pending' | 'failure';
 type DepositStatusMap = {
   [key in Operation]: {
-    [key in DepositStatusType]: UiDepositStatus[];
+    [key in DepositStatusType]: DepositStatus[];
   };
 };
 type OperationNameMap = {
@@ -220,7 +217,7 @@ const DEPOSIT_STATUS_MAP: DepositStatusMap = {
   },
   withdraw: {
     success: ['WithdrawConfirmed'],
-    pending: ['WithdrawProcessing', 'ChainSignProcessing'],
+    pending: ['WithdrawChainSignProcessing', 'WithdrawProcessing'],
     failure: ['WithdrawFailed'],
   },
 };
@@ -261,7 +258,7 @@ async function waitForOperation(
   deposits: Deposits,
   { timeout = DEFAULT_WAIT_TIMEOUT }: WaitOptions = {},
 ) {
-  let _deposits = parseDepositsInput(deposits);
+  const _deposits = parseDepositsInput(deposits);
   const data = await queryDeposits(publicKey, _deposits);
   if (data.length === 0) {
     throw Error(`The deposits (${deposits}) are not found`);
@@ -282,15 +279,13 @@ async function waitForOperation(
     invalid: 0,
   };
   const startTime = Date.now();
-  while (true) {
-    if (Date.now() - startTime > timeout) {
-      throw Error(
-        `Waiting timeout ${timeout} ms reached for ${OPERATION_NAME_MAP[operation].doing} (${formatDeposits(_deposits)})`,
-      );
-    }
-
-    const pendingDeposits: Deposit[] = [];
-    for (const _deposit of _deposits) {
+  for (const _deposit of _deposits) {
+    while (true) {
+      if (Date.now() - startTime > timeout) {
+        throw Error(
+          `Waiting timeout ${timeout} ms reached for ${OPERATION_NAME_MAP[operation].doing} (${formatDeposits(_deposits)})`,
+        );
+      }
       // Get deposit by public key and deposit tx hash and vout
       const { deposit } = await relayer.user.getDeposit({
         publicKey,
@@ -304,10 +299,14 @@ async function waitForOperation(
           `Deposit (${formatDeposit(_deposit)}) has been ${OPERATION_NAME_MAP[operation].done} successfully`,
         );
         count.success++;
+        break;
       } else if (
         DEPOSIT_STATUS_MAP[operation].pending.includes(depositStatus)
       ) {
-        pendingDeposits.push(_deposit);
+        console.log(
+          `The deposit ${OPERATION_NAME_MAP[operation].doing} of (${formatDeposit(_deposit)}) is under processing... Waiting for 2 minutes...`,
+        );
+        await sleep(DEFAULT_WAIT_INTERVAL);
       } else if (
         DEPOSIT_STATUS_MAP[operation].failure.includes(depositStatus)
       ) {
@@ -315,26 +314,19 @@ async function waitForOperation(
           `Deposit (${formatDeposit(_deposit)}) has failed to ${OPERATION_NAME_MAP[operation].do}`,
         );
         count.failure++;
+        break;
       } else {
         console.error(
           `Invalid status (${depositStatus}) for ${OPERATION_NAME_MAP[operation].doing} (${formatDeposit(_deposit)})`,
         );
         count.invalid++;
+        break;
       }
     }
-    if (pendingDeposits.length > 0) {
-      console.log(
-        `The deposits ${OPERATION_NAME_MAP[operation].doing} of (${formatDeposits(pendingDeposits)}) ${pendingDeposits.length > 1 ? 'are' : 'is'} under processing... Waiting for 2 minutes...`,
-      );
-      _deposits = pendingDeposits;
-      await sleep(DEFAULT_WAIT_INTERVAL);
-    } else {
-      console.log(
-        `All deposits ${OPERATION_NAME_MAP[operation].doing} have been processed. Success: ${count.success}, Failure: ${count.failure}, Invalid: ${count.invalid}`,
-      );
-      break;
-    }
   }
+  console.log(
+    `All ${_deposits.length} deposits ${OPERATION_NAME_MAP[operation].doing} have been processed. Success: ${count.success}, Failure: ${count.failure}, Invalid: ${count.invalid}`,
+  );
 }
 
 /**
