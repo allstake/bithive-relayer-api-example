@@ -324,9 +324,11 @@ async function waitForOperation(
       }
     }
   }
-  console.log(
-    `All ${_deposits.length} deposits ${OPERATION_NAME_MAP[operation].doing} have been processed. Success: ${count.success}, Failure: ${count.failure}, Invalid: ${count.invalid}`,
-  );
+  if (_deposits.length > 1) {
+    console.log(
+      `All ${_deposits.length} deposits ${OPERATION_NAME_MAP[operation].doing} have been processed. Success: ${count.success}, Failure: ${count.failure}, Invalid: ${count.invalid}`,
+    );
+  }
 }
 
 /**
