@@ -15,9 +15,15 @@ export type SignPsbtOptions = {
   }[];
 };
 
+/**
+ * Bitcoin provider interface that is compatible with BTC wallets like UniSat, OKX Wallet, etc.
+ */
 export interface BitcoinProvider {
-  signPsbt: (psbt: string, options?: SignPsbtOptions) => string;
-  signMessage: (message: string, signatureType?: SignatureType) => string;
+  signPsbt: (psbt: string, options?: SignPsbtOptions) => Promise<string>;
+  signMessage: (
+    message: string,
+    signatureType?: SignatureType,
+  ) => Promise<string>;
 }
 
 export class BitcoinSigner implements BitcoinProvider {
@@ -121,7 +127,7 @@ export class BitcoinSigner implements BitcoinProvider {
     return payment.address;
   }
 
-  signPsbt(psbtHex: string, options?: SignPsbtOptions): string {
+  async signPsbt(psbtHex: string, options?: SignPsbtOptions): Promise<string> {
     const psbt = bitcoin.Psbt.fromHex(psbtHex, { network: this.network });
     const autoFinalized = options?.autoFinalized ?? true;
 
@@ -146,7 +152,10 @@ export class BitcoinSigner implements BitcoinProvider {
     return psbt.toHex();
   }
 
-  signMessage(message: string, signatureType: SignatureType = 'ECDSA'): string {
+  async signMessage(
+    message: string,
+    signatureType: SignatureType = 'ECDSA',
+  ): Promise<string> {
     if (signatureType === 'ECDSA') {
       return this.signMessageEcdsa(message);
     } else {

@@ -39,7 +39,7 @@ export async function stake(
     });
 
     // 2. Sign and finalize the PSBT with wallet
-    const signedPsbt = provider.signPsbt(unsignedPsbt);
+    const signedPsbt = await provider.signPsbt(unsignedPsbt);
 
     // 3. Submit the finalized PSBT for broadcasting and relaying
     const { txHash } = await relayer.deposit.submitFinalizedPsbt({
@@ -87,7 +87,7 @@ export async function unstake(
     });
 
     // 2. Sign the unstaking message with wallet
-    const signature = provider.signMessage(message);
+    const signature = await provider.signMessage(message);
 
     // 3. Submit the unstaking signature and relay to BitHive contract on NEAR
     await relayer.unstake.submitSignature({
@@ -154,7 +154,7 @@ export async function withdraw(
     });
 
     // 2. Sign the PSBT with wallet. Don't finalize it.
-    partiallySignedPsbt = provider.signPsbt(unsignedPsbt, {
+    partiallySignedPsbt = await provider.signPsbt(unsignedPsbt, {
       autoFinalized: false,
       toSignInputs: _deposits.map((_, index) => ({
         index,
