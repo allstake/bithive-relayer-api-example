@@ -148,6 +148,7 @@ export async function withdraw(
   } else if (provider.signPsbt) {
     // 1. Build the PSBT that is ready for signing
     const { psbt: unsignedPsbt } = await relayer.withdraw.buildUnsignedPsbt({
+      publicKey,
       deposits: _deposits,
       recipientAddress: address,
       ...options,

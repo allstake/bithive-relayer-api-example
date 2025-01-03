@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@bithive/relayer-api':
-        specifier: ^0.0.9
-        version: 0.0.9(@trpc/server@10.45.2)
+        specifier: ^0.0.11
+        version: 0.0.11(@trpc/server@10.45.2)
       '@okxweb3/coin-bitcoin':
         specifier: ^1.0.37
         version: 1.0.37(@okxweb3/coin-base@1.0.12-beta.4(@okxweb3/crypto-lib@1.0.7-beta.4))(@okxweb3/crypto-lib@1.0.7-beta.4)
@@ -57,8 +57,8 @@ importers:
 
 packages:
 
-  '@bithive/relayer-api@0.0.9':
-    resolution: {integrity: sha512-NTHNX9xUdLp6ktif5BDL82eq5auz1M8NLwuWPPZuQDiHKbxks6ElgbRvH//90Q51Xf8ZOZxbOZVBH56SExsaxg==}
+  '@bithive/relayer-api@0.0.11':
+    resolution: {integrity: sha512-qBnUOFr2fUMbcQ2gLx82cPlFdTYIi5duLC3AaO4LvmC06KSf93ZCAOSqt5lbdviQivFY4FE5wJDCOyg453SjXw==}
 
   '@cat-protocol/cat-smartcontracts@0.2.8':
     resolution: {integrity: sha512-S4lZoCxb3awJNmyF2vB76Q9Gg7pCDbtrHY5OlRgU9g6/5quh7z6PZekofG1oUOUOW6m3JRygGk5Yqpy2HntgLQ==}
@@ -1694,7 +1694,7 @@ packages:
 
 snapshots:
 
-  '@bithive/relayer-api@0.0.9(@trpc/server@10.45.2)':
+  '@bithive/relayer-api@0.0.11(@trpc/server@10.45.2)':
     dependencies:
       '@trpc/client': 10.45.2(@trpc/server@10.45.2)
     transitivePeerDependencies:
