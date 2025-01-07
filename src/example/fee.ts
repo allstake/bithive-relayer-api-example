@@ -41,9 +41,15 @@ export async function run() {
 
   // Withdraw the unstaked BTC with a custom fee of 400 sats
   console.log('Withdrawing BTC...');
-  const withdrawalTxHash = await withdraw(signer, publicKey, address, txHash, {
-    fee: 400,
-  });
+  const { txHash: withdrawalTxHash } = await withdraw(
+    signer,
+    publicKey,
+    address,
+    txHash,
+    {
+      fee: 400,
+    },
+  );
   await waitUntilWithdrawn(publicKey, txHash);
   console.log(
     'Withdrawn BTC confirmed. Withdrawal transaction:',
