@@ -29,28 +29,27 @@ export async function stake(
     feeRate?: number;
   },
 ) {
-  if (provider.signPsbt) {
-    // 1. Build the PSBT that is ready for signing
-    const { psbt: unsignedPsbt } = await relayer.deposit.buildUnsignedPsbt({
-      publicKey,
-      address,
-      amount,
-      ...options,
-    });
+  // 1. Build the PSBT that is ready for signing
+  const { psbt: unsignedPsbt } = await relayer.deposit.buildUnsignedPsbt({
+    publicKey,
+    address,
+    amount,
+    ...options,
+  });
 
-    // 2. Sign and finalize the PSBT with wallet
-    const signedPsbt = await provider.signPsbt(unsignedPsbt);
-
-    // 3. Submit the finalized PSBT for broadcasting and relaying
-    const { txHash } = await relayer.deposit.submitFinalizedPsbt({
-      psbt: signedPsbt,
-      publicKey,
-    });
-
-    return txHash;
-  } else {
+  // 2. Sign and finalize the PSBT with wallet
+  if (!provider.signPsbt) {
     throw Error('signPsbt is not supported');
   }
+  const signedPsbt = await provider.signPsbt(unsignedPsbt);
+
+  // 3. Submit the finalized PSBT for broadcasting and relaying
+  const { txHash } = await relayer.deposit.submitFinalizedPsbt({
+    psbt: signedPsbt,
+    publicKey,
+  });
+
+  return txHash;
 }
 
 /**
@@ -79,25 +78,24 @@ export async function unstake(
     );
   }
 
-  if (provider.signMessage) {
-    // 1. Build the unstaking message that is ready for signing
-    const { message } = await relayer.unstake.buildUnsignedMessage({
-      deposits: _deposits,
-      publicKey,
-    });
+  // 1. Build the unstaking message that is ready for signing
+  const { message } = await relayer.unstake.buildUnsignedMessage({
+    deposits: _deposits,
+    publicKey,
+  });
 
-    // 2. Sign the unstaking message with wallet
-    const signature = await provider.signMessage(message);
-
-    // 3. Submit the unstaking signature and relay to BitHive contract on NEAR
-    await relayer.unstake.submitSignature({
-      deposits: _deposits,
-      publicKey,
-      signature: Buffer.from(signature, 'base64').toString('hex'),
-    });
-  } else {
+  // 2. Sign the unstaking message with wallet
+  if (!provider.signMessage) {
     throw Error('signMessage is not supported');
   }
+  const signature = await provider.signMessage(message);
+
+  // 3. Submit the unstaking signature and relay to BitHive contract on NEAR
+  await relayer.unstake.submitSignature({
+    deposits: _deposits,
+    publicKey,
+    signature: Buffer.from(signature, 'base64').toString('hex'),
+  });
 }
 
 /**
@@ -124,17 +122,6 @@ export async function withdraw(
   if (data.length === 0) {
     throw Error(`The deposits (${deposits}) are not found`);
   }
-  const invalidDeposit = data.find(
-    (deposit) =>
-      !['UnstakeConfirmed', 'WithdrawChainSignProcessing'].includes(
-        deposit.status,
-      ),
-  );
-  if (invalidDeposit) {
-    throw Error(
-      `The deposit (${invalidDeposit.depositTxHash}) with status (${invalidDeposit.status}) is not ready to withdraw`,
-    );
-  }
 
   // Get the account info by public key
   const { account } = await relayer.user.getAccount({
@@ -145,7 +132,16 @@ export async function withdraw(
   if (account.pendingSignPsbt) {
     // If there's a pending PSBT for signing, user cannot request signing a new PSBT
     partiallySignedPsbt = account.pendingSignPsbt.psbt;
-  } else if (provider.signPsbt) {
+  } else {
+    const invalidDeposit = data.find(
+      (deposit) => !['UnstakeConfirmed'].includes(deposit.status),
+    );
+    if (invalidDeposit) {
+      throw Error(
+        `The deposit (${invalidDeposit.depositTxHash}) with status (${invalidDeposit.status}) is not ready to withdraw`,
+      );
+    }
+
     // 1. Build the PSBT that is ready for signing
     const { psbt: unsignedPsbt } = await relayer.withdraw.buildUnsignedPsbt({
       publicKey,
@@ -155,6 +151,9 @@ export async function withdraw(
     });
 
     // 2. Sign the PSBT with wallet. Don't finalize it.
+    if (!provider.signPsbt) {
+      throw Error('signPsbt is not supported');
+    }
     partiallySignedPsbt = await provider.signPsbt(unsignedPsbt, {
       autoFinalized: false,
       toSignInputs: _deposits.map((_, index) => ({
@@ -162,8 +161,6 @@ export async function withdraw(
         publicKey,
       })),
     });
-  } else {
-    throw Error('signPsbt is not supported');
   }
 
   // 3. Sign the PSBT with NEAR Chain Signatures
