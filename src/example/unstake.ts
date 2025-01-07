@@ -41,7 +41,12 @@ export async function run() {
 
   // Withdraw the unstaked BTC
   console.log('Withdrawing BTC...');
-  const withdrawalTxHash = await withdraw(signer, publicKey, address, txHash);
+  const { txHash: withdrawalTxHash } = await withdraw(
+    signer,
+    publicKey,
+    address,
+    txHash,
+  );
   await waitUntilWithdrawn(publicKey, txHash);
   console.log(
     'Withdrawn BTC confirmed. Withdrawal transaction:',

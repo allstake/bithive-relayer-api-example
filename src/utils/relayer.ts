@@ -6,6 +6,15 @@ import { sleep } from './helper';
 // Create a relayer client
 export const relayer = createRelayerClient({ url: config.relayerRpcUrl });
 
+export type Deposit = {
+  txHash: string;
+  vout: number;
+};
+
+export type WithdrawalInput = Deposits | number;
+
+export type Deposits = Deposit[] | string | string[];
+
 /**
  * Stake BTC to BitHive
  * @param provider BTC provider with `signPsbt` interface
@@ -61,26 +70,34 @@ export async function stake(
 export async function unstake(
   provider: BitcoinProvider,
   publicKey: string,
-  deposits: Deposits,
+  input: WithdrawalInput,
 ) {
-  const _deposits = parseDepositsInput(deposits);
-  const data = await queryDeposits(publicKey, _deposits);
-  if (data.length === 0) {
-    throw Error(`The deposits (${deposits}) are not found`);
-  }
-  const invalidDeposit = data.find(
-    (deposit) =>
-      !['DepositConfirmed', 'DepositConfirmedInvalid'].includes(deposit.status),
-  );
-  if (invalidDeposit) {
-    throw Error(
-      `The deposit (${invalidDeposit.depositTxHash}) with status (${invalidDeposit.status}) is not ready to unstake`,
+  const { amount, deposits } = parseWithdrawalInput(input);
+
+  let _deposits;
+  if (deposits) {
+    _deposits = parseDepositsInput(deposits);
+    const data = await queryDeposits(publicKey, _deposits);
+    if (data.length === 0) {
+      throw Error(`The deposits (${deposits}) are not found`);
+    }
+    const invalidDeposit = data.find(
+      (deposit) =>
+        !['DepositConfirmed', 'DepositConfirmedInvalid'].includes(
+          deposit.status,
+        ),
     );
+    if (invalidDeposit) {
+      throw Error(
+        `The deposit (${invalidDeposit.depositTxHash}) with status (${invalidDeposit.status}) is not ready to unstake`,
+      );
+    }
   }
 
   // 1. Build the unstaking message that is ready for signing
   const { message } = await relayer.unstake.buildUnsignedMessage({
     deposits: _deposits,
+    amount,
     publicKey,
   });
 
@@ -93,6 +110,7 @@ export async function unstake(
   // 3. Submit the unstaking signature and relay to BitHive contract on NEAR
   await relayer.unstake.submitSignature({
     deposits: _deposits,
+    amount,
     publicKey,
     signature: Buffer.from(signature, 'base64').toString('hex'),
   });
@@ -111,17 +129,14 @@ export async function withdraw(
   provider: BitcoinProvider,
   publicKey: string,
   address: string,
-  deposits: Deposits,
+  input: WithdrawalInput,
   options?: {
     fee?: number;
     feeRate?: number;
   },
 ) {
-  const _deposits = parseDepositsInput(deposits);
-  const data = await queryDeposits(publicKey, _deposits);
-  if (data.length === 0) {
-    throw Error(`The deposits (${deposits}) are not found`);
-  }
+  const { amount, deposits } = parseWithdrawalInput(input);
+  let withdrawnDeposits;
 
   // Get the account info by public key
   const { account } = await relayer.user.getAccount({
@@ -132,23 +147,36 @@ export async function withdraw(
   if (account.pendingSignPsbt) {
     // If there's a pending PSBT for signing, user cannot request signing a new PSBT
     partiallySignedPsbt = account.pendingSignPsbt.psbt;
+    withdrawnDeposits = account.pendingSignPsbt.deposits;
   } else {
-    const invalidDeposit = data.find(
-      (deposit) => !['UnstakeConfirmed'].includes(deposit.status),
-    );
-    if (invalidDeposit) {
-      throw Error(
-        `The deposit (${invalidDeposit.depositTxHash}) with status (${invalidDeposit.status}) is not ready to withdraw`,
+    let _deposits;
+
+    if (deposits) {
+      _deposits = parseDepositsInput(deposits);
+      const data = await queryDeposits(publicKey, _deposits);
+      if (data.length === 0) {
+        throw Error(`The deposits (${deposits}) are not found`);
+      }
+
+      const invalidDeposit = data.find(
+        (deposit) => !['UnstakeConfirmed'].includes(deposit.status),
       );
+      if (invalidDeposit) {
+        throw Error(
+          `The deposit (${invalidDeposit.depositTxHash}) with status (${invalidDeposit.status}) is not ready to withdraw`,
+        );
+      }
     }
 
     // 1. Build the PSBT that is ready for signing
-    const { psbt: unsignedPsbt } = await relayer.withdraw.buildUnsignedPsbt({
-      publicKey,
-      deposits: _deposits,
-      recipientAddress: address,
-      ...options,
-    });
+    const { psbt: unsignedPsbt, deposits: depositsToSign } =
+      await relayer.withdraw.buildUnsignedPsbt({
+        publicKey,
+        deposits: _deposits,
+        amount,
+        recipientAddress: address,
+        ...options,
+      });
 
     // 2. Sign the PSBT with wallet. Don't finalize it.
     if (!provider.signPsbt) {
@@ -156,11 +184,12 @@ export async function withdraw(
     }
     partiallySignedPsbt = await provider.signPsbt(unsignedPsbt, {
       autoFinalized: false,
-      toSignInputs: _deposits.map((_, index) => ({
+      toSignInputs: depositsToSign.map((_, index) => ({
         index,
         publicKey,
       })),
     });
+    withdrawnDeposits = depositsToSign;
   }
 
   // 3. Sign the PSBT with NEAR Chain Signatures
@@ -173,19 +202,15 @@ export async function withdraw(
     psbt: fullySignedPsbt,
   });
 
-  return txHash;
+  return {
+    txHash,
+    deposits: withdrawnDeposits,
+  };
 }
 
 export type WaitOptions = {
   timeout?: number;
 };
-
-export type Deposit = {
-  txHash: string;
-  vout: number;
-};
-
-export type Deposits = Deposit[] | string | string[];
 
 type Operation = 'stake' | 'unstake' | 'withdraw';
 type DepositStatusType = 'success' | 'pending' | 'failure';
@@ -353,10 +378,19 @@ export async function waitUntilStaked(
  */
 export async function waitUntilUnstaked(
   publicKey: string,
-  deposits: Deposits,
+  input: WithdrawalInput,
   { timeout = DEFAULT_WAIT_TIMEOUT }: WaitOptions = {},
 ) {
-  return waitForOperation('unstake', publicKey, deposits, { timeout });
+  const { deposits, amount } = parseWithdrawalInput(input);
+
+  if (deposits) {
+    return waitForOperation('unstake', publicKey, deposits, { timeout });
+  } else {
+    return relayer.unstake.waitUntilConfirmed(
+      { amount, publicKey },
+      { timeout },
+    );
+  }
 }
 
 /**
@@ -441,5 +475,13 @@ function formatDeposits(deposits: Deposit[] | Deposit) {
     return deposits.map(formatDeposit).join(', ');
   } else {
     return formatDeposit(deposits);
+  }
+}
+
+export function parseWithdrawalInput(input: WithdrawalInput) {
+  if (typeof input === 'number') {
+    return { amount: input, deposits: undefined };
+  } else {
+    return { amount: undefined, deposits: input };
   }
 }
