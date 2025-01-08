@@ -43,6 +43,14 @@ Example code: [unstake.ts](./src/example/unstake.ts)
 pnpm start unstake
 ```
 
+### Stake 0.00005 BTC, and then partially unstake and withdraw 0.00003 BTC
+
+Example code: [partial-withdrawal.ts](./src/example/partial-withdrawal.ts)
+
+```bash
+pnpm start partial-withdrawal
+```
+
 ### List deposits of a user
 
 Example code: [deposits.ts](./src/example/deposits.ts)
@@ -65,12 +73,4 @@ Example code: [staker.ts](./src/example/staker.ts)
 
 ```bash
 pnpm start staker
-```
-
-### Stake and unstake and partially withdraw 0.00005 BTC with more readable code
-
-Example code: [partialWithdraw.ts](./src/example/partialWithdraw.ts)
-
-```bash
-pnpm start partialWithdraw
 ```

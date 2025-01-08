@@ -12,9 +12,9 @@ import { BitcoinSigner } from '../utils/signer';
 import { txUrl } from '../utils/helper';
 
 /**
- * Stake and unstake and partially withdraw BTC with custom fee.
+ * Stake BTC, and then unstake and withdraw partially
  *
- * Run with `pnpm start partialWithdraw`
+ * Run with `pnpm start partial-withdrawal`
  */
 export async function run() {
   // Initialize a Bitcoin signer
@@ -26,31 +26,30 @@ export async function run() {
   const publicKey = signer.getPublicKey();
   const address = signer.getAddress();
 
-  // Stake 0.00005 BTC with a custom fee of 400 sats
+  // Stake 0.00005 BTC
   console.log('Staking 0.00005 BTC...');
-  const amount = 5000;
-  const txHash = await stake(signer, publicKey, address, amount, { fee: 400 });
+  const stakeAmount = 5000;
+  const txHash = await stake(signer, publicKey, address, stakeAmount);
   await waitUntilStaked(publicKey, txHash);
   console.log('Staked BTC confirmed', txUrl(txHash));
 
-  // Unstake the staked 0.00005 BTC
-  console.log('Unstaking BTC...');
-  await unstake(signer, publicKey, amount);
-  await waitUntilUnstaked(publicKey, amount);
+  // Unstake 0.00003 BTC partially, rather than with a specific deposit tx hash
+  console.log('Unstaking 0.00003 BTC...');
+  const unstakeAmount = 3000;
+  await unstake(signer, publicKey, unstakeAmount);
+  await waitUntilUnstaked(publicKey, unstakeAmount);
   console.log('Unstaked BTC confirmed');
 
-  // Withdraw the unstaked BTC with a custom fee of 400 sats
-  console.log('Withdrawing BTC...');
-  const { txHash: withdrawalTxHash } = await withdraw(
+  // Withdraw 0.00003 BTC partially, rather than with a specific deposit tx hash
+  // The remaining 0.00002 BTC will be redeposited
+  console.log('Withdrawing 0.00003 BTC...');
+  const { txHash: withdrawalTxHash, deposits } = await withdraw(
     signer,
     publicKey,
     address,
-    amount,
-    {
-      fee: 400,
-    },
+    unstakeAmount,
   );
-  await waitUntilWithdrawn(publicKey, txHash);
+  await waitUntilWithdrawn(publicKey, deposits);
   console.log(
     'Withdrawn BTC confirmed. Withdrawal transaction:',
     txUrl(withdrawalTxHash),
