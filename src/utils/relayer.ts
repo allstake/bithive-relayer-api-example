@@ -363,7 +363,7 @@ export async function waitUntilStaked(
 /**
  * Wait until the deposit is unstaked
  * @param publicKey User public key (compressed)
- * @param deposits A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout
+ * @param input A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout, or the amount to unstake
  * @param options Wait options:
  *  - timeout: The timeout (in milliseconds) for waiting the unstaking operation to be confirmed. Default is 1 hour.
  */
@@ -471,6 +471,9 @@ function formatDeposits(deposits: Deposit[] | Deposit) {
 
 export function parseWithdrawalInput(input: WithdrawalInput) {
   if (typeof input === 'number') {
+    if (input <= 0) {
+      throw Error('The amount must be positive');
+    }
     return { amount: input, deposits: undefined };
   } else {
     return { amount: undefined, deposits: input };
