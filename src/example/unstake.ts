@@ -29,7 +29,7 @@ export async function run() {
   // Stake 0.00005 BTC
   console.log('Staking 0.00005 BTC...');
   const amount = 5000;
-  const txHash = await stake(signer, publicKey, address, amount);
+  const { txHash } = await stake(signer, publicKey, address, amount);
   await waitUntilStaked(publicKey, txHash);
   console.log('Staked BTC confirmed', txUrl(txHash));
 
@@ -41,7 +41,12 @@ export async function run() {
 
   // Withdraw the unstaked BTC
   console.log('Withdrawing BTC...');
-  const withdrawalTxHash = await withdraw(signer, publicKey, address, txHash);
+  const { txHash: withdrawalTxHash } = await withdraw(
+    signer,
+    publicKey,
+    address,
+    txHash,
+  );
   await waitUntilWithdrawn(publicKey, txHash);
   console.log(
     'Withdrawn BTC confirmed. Withdrawal transaction:',
