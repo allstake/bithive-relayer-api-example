@@ -62,7 +62,7 @@ export async function stake(
  * Unstake BTC from BitHive
  * @param provider BTC provider with `signMessage` interface
  * @param publicKey User public key (compressed)
- * @param deposits A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout
+ * @param input A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout
  */
 export async function unstake(
   provider: BitcoinProvider,
@@ -115,7 +115,7 @@ export async function unstake(
  * @param provider BTC provider with `signPsbt` interface
  * @param publicKey User public key (compressed)
  * @param address Recipient address (can be different with user address)
- * @param deposits A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout
+ * @param input A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout
  * @param options Optional: specify the fee (in sats) or fee rate (in sat/vB) for the withdrawal transaction. If not specified, the fee will be calculated automatically.
  * @returns Withdrawal tx hash
  */
