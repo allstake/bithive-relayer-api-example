@@ -11,9 +11,9 @@ export type Deposit = {
   vout: number;
 };
 
-export type WithdrawalInput = Deposits | number;
-
 export type Deposits = Deposit[] | string | string[];
+
+export type WithdrawalInput = Deposits | number;
 
 /**
  * Stake BTC to BitHive
