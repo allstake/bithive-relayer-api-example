@@ -29,7 +29,7 @@ export async function run() {
   // Stake 0.00005 BTC
   console.log('Staking 0.00005 BTC...');
   const stakeAmount = 5000;
-  const txHash = await stake(signer, publicKey, address, stakeAmount);
+  const { txHash } = await stake(signer, publicKey, address, stakeAmount);
   await waitUntilStaked(publicKey, txHash);
   console.log('Staked BTC confirmed', txUrl(txHash));
 

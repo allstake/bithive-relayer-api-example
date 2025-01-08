@@ -46,7 +46,7 @@ export class BitHiveStaker {
     const address = this.signer.getAddress();
 
     console.log(`Staking ${satToBtc(amount)} BTC...`);
-    const txHash = await stake(this.signer, publicKey, address, amount, {
+    const { txHash } = await stake(this.signer, publicKey, address, amount, {
       fee,
       feeRate,
     });

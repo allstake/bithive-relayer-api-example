@@ -55,7 +55,7 @@ export async function stake(
     publicKey,
   });
 
-  return txHash;
+  return { txHash };
 }
 
 /**
