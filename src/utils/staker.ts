@@ -83,7 +83,7 @@ export class BitHiveStaker {
 
   /**
    * Withdraw BTC
-   * @param deposits A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout, or the withdrawal amount
+   * @param input A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout, or the withdrawal amount
    * @param options Withdrawal options
    *  - fee: Specify the fee (in sats) for the withdrawal transaction. If not specified, the fee will be calculated automatically.
    *  - feeRate: Specify the fee rate (in sat/vB) for the withdrawal transaction. If not specified, the fee will be calculated automatically.
