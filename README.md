@@ -66,3 +66,11 @@ Example code: [staker.ts](./src/example/staker.ts)
 ```bash
 pnpm start staker
 ```
+
+### Stake and unstake and partially withdraw 0.00005 BTC with more readable code
+
+Example code: [partialWithdraw.ts](./src/example/partialWithdraw.ts)
+
+```bash
+pnpm start partialWithdraw
+```
