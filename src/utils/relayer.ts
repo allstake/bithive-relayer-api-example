@@ -142,8 +142,9 @@ export async function withdraw(
     partiallySignedPsbt = account.pendingSignPsbt.psbt;
     withdrawnDeposits = account.pendingSignPsbt.deposits;
     console.warn(
-      `The account with public key (${publicKey}) has a withdrawal PSBT that is pending signing.\n` +
-        `We need to complete signing this withdrawal PSBT before we can submit a new one: ${JSON.stringify(account.pendingSignPsbt, null, 2)}`,
+      `The account with public key (${publicKey}) has a withdrawal PSBT that is pending signing by NEAR Chain Signatures.\n` +
+        `We need to complete signing this withdrawal PSBT before we can submit a new one: ${JSON.stringify(account.pendingSignPsbt, null, 2)}.\n` +
+        `Submit withdrawal PSBT for signing ....`,
     );
   } else {
     const { amount, deposits } = parseWithdrawalInput(input);
