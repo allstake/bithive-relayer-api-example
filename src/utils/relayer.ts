@@ -129,20 +129,24 @@ export async function withdraw(
     feeRate?: number;
   },
 ) {
-  const { amount, deposits } = parseWithdrawalInput(input);
-  let withdrawnDeposits;
-
   // Get the account info by public key
   const { account } = await relayer.user.getAccount({
     publicKey,
   });
 
   let partiallySignedPsbt: string | undefined = undefined;
+  let withdrawnDeposits;
+
   if (account.pendingSignPsbt) {
     // If there's a pending PSBT for signing, user cannot request signing a new PSBT
     partiallySignedPsbt = account.pendingSignPsbt.psbt;
     withdrawnDeposits = account.pendingSignPsbt.deposits;
+    console.warn(
+      `The account with public key (${publicKey}) has a withdrawal PSBT that is pending signing.\n` +
+        `We need to complete signing this withdrawal PSBT before we can submit a new one: ${JSON.stringify(account.pendingSignPsbt, null, 2)}`,
+    );
   } else {
+    const { amount, deposits } = parseWithdrawalInput(input);
     let _deposits;
 
     if (deposits) {
