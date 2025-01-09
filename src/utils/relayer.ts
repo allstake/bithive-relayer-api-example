@@ -129,20 +129,26 @@ export async function withdraw(
     feeRate?: number;
   },
 ) {
-  const { amount, deposits } = parseWithdrawalInput(input);
-  let withdrawnDeposits;
-
   // Get the account info by public key
   const { account } = await relayer.user.getAccount({
     publicKey,
   });
 
   let partiallySignedPsbt: string | undefined = undefined;
+  let withdrawnDeposits;
+
   if (account.pendingSignPsbt) {
     // If there's a pending PSBT for signing, user cannot request signing a new PSBT
     partiallySignedPsbt = account.pendingSignPsbt.psbt;
     withdrawnDeposits = account.pendingSignPsbt.deposits;
+    console.warn(
+      `[Warning] The account with public key (${publicKey}) has a pending withdrawal PSBT that has not been signed by NEAR Chain Signatures. ` +
+        `The signing request is either still in progress or has failed in the last attempt. ` +
+        `We need to complete signing this withdrawal PSBT before we can submit a new one: ${JSON.stringify(account.pendingSignPsbt, null, 2)}.\n` +
+        `Submit the above withdrawal PSBT for signing ... This may fail if the last signing request is still in progress, or NEAR Chain Signatures service is unstable.`,
+    );
   } else {
+    const { amount, deposits } = parseWithdrawalInput(input);
     let _deposits;
 
     if (deposits) {
