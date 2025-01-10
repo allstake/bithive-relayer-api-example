@@ -52,7 +52,6 @@ export async function stake(
   // 3. Submit the finalized PSBT for broadcasting and relaying
   const { txHash } = await relayer.deposit.submitFinalizedPsbt({
     psbt: signedPsbt,
-    publicKey,
   });
 
   return { txHash };
