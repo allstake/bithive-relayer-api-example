@@ -1,15 +1,16 @@
 import * as bitcoin from 'bitcoinjs-lib';
+
 import { config } from '../utils/config';
+import { txUrl } from '../utils/helper';
 import {
   stake,
   unstake,
-  withdraw,
   waitUntilStaked,
   waitUntilUnstaked,
   waitUntilWithdrawn,
+  withdraw,
 } from '../utils/relayer';
 import { BitcoinSigner } from '../utils/signer';
-import { txUrl } from '../utils/helper';
 
 /**
  * Stake BTC, and then unstake and withdraw partially

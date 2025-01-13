@@ -1,8 +1,9 @@
 import * as bitcoin from 'bitcoinjs-lib';
+
 import { config } from '../utils/config';
+import { txUrl } from '../utils/helper';
 import { listDeposits, stake, waitUntilStaked } from '../utils/relayer';
 import { BitcoinSigner } from '../utils/signer';
-import { txUrl } from '../utils/helper';
 
 /**
  * Stake BTC.

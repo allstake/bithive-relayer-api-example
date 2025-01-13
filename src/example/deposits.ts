@@ -1,4 +1,5 @@
 import * as bitcoin from 'bitcoinjs-lib';
+
 import { config } from '../utils/config';
 import { listDeposits } from '../utils/relayer';
 import { BitcoinSigner } from '../utils/signer';

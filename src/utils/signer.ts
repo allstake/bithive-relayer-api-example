@@ -1,8 +1,9 @@
-import * as okx from '@okxweb3/coin-bitcoin';
+import * as bitcoin from 'bitcoinjs-lib';
 import { ECPairFactory, ECPairInterface } from 'ecpair';
 import * as ecc from 'tiny-secp256k1';
-import * as bitcoin from 'bitcoinjs-lib';
+
 import { SignatureType } from '@bithive/relayer-api';
+import * as okx from '@okxweb3/coin-bitcoin';
 
 type AddressType = 'NativeSegwit' | 'NestedSegwit' | 'Legacy';
 
