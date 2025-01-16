@@ -1,7 +1,7 @@
-import * as bitcoin from 'bitcoinjs-lib';
 import { config } from '../utils/config';
 import { listDeposits } from '../utils/relayer';
 import { BitcoinSigner } from '../utils/signer';
+import { getBitcoinNetwork } from '../utils/helper';
 
 /**
  * List deposits of a user.
@@ -10,10 +10,7 @@ import { BitcoinSigner } from '../utils/signer';
  */
 export async function run() {
   // Initialize a Bitcoin signer
-  const signer = BitcoinSigner.fromWif(
-    config.privateKey,
-    bitcoin.networks.testnet,
-  );
+  const signer = BitcoinSigner.fromWif(config.privateKey, getBitcoinNetwork());
   // Get the public key
   const publicKey = signer.getPublicKey();
 
