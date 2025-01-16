@@ -6,12 +6,11 @@ export async function sleep(ms: number) {
 }
 
 export function txUrl(txHash: string) {
-  const network = getBitcoinNetwork();
-  if (network === bitcoin.networks.testnet) {
-    return `https://mempool.space/${config.network}/tx/${txHash}`;
-  } else {
-    return `https://mempool.space/tx/${txHash}`;
-  }
+  const network =
+    getBitcoinNetwork() === bitcoin.networks.testnet
+      ? `${config.network}/`
+      : '';
+  return `https://mempool.space/${network}tx/${txHash}`;
 }
 
 export function satToBtc(sats: number) {
