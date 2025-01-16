@@ -159,12 +159,8 @@ export class BitcoinSigner implements BitcoinProvider {
   ): Promise<string> {
     if (signatureType === 'ECDSA') {
       return this.signMessageEcdsa(message);
-    } else {
-      return this.signMessageBip32Full(
-        message,
-        signatureType.Bip322Full.address,
-      );
     }
+    return this.signMessageBip32Full(message, signatureType.Bip322Full.address);
   }
 
   private signMessageEcdsa(message: string): string {
