@@ -1,7 +1,4 @@
-import * as bitcoin from 'bitcoinjs-lib';
-
 import { config } from '../utils/config';
-import { txUrl } from '../utils/helper';
 import {
   stake,
   unstake,
@@ -11,6 +8,7 @@ import {
   withdraw,
 } from '../utils/relayer';
 import { BitcoinSigner } from '../utils/signer';
+import { getBitcoinNetwork, txUrl } from '../utils/helper';
 
 /**
  * Stake BTC, and then unstake and withdraw partially
@@ -19,10 +17,7 @@ import { BitcoinSigner } from '../utils/signer';
  */
 export async function run() {
   // Initialize a Bitcoin signer
-  const signer = BitcoinSigner.fromWif(
-    config.privateKey,
-    bitcoin.networks.testnet,
-  );
+  const signer = BitcoinSigner.fromWif(config.privateKey, getBitcoinNetwork());
   // Get the public key and address
   const publicKey = signer.getPublicKey();
   const address = signer.getAddress();

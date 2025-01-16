@@ -1,8 +1,7 @@
-import * as bitcoin from 'bitcoinjs-lib';
-
 import { config } from '../utils/config';
 import { BitcoinSigner } from '../utils/signer';
 import { BitHiveStaker } from '../utils/staker';
+import { getBitcoinNetwork } from '../utils/helper';
 
 /**
  * Stake and unstake BTC with BitHive Staker.
@@ -11,10 +10,7 @@ import { BitHiveStaker } from '../utils/staker';
  */
 export async function run() {
   // Initialize a Bitcoin signer
-  const signer = BitcoinSigner.fromWif(
-    config.privateKey,
-    bitcoin.networks.testnet,
-  );
+  const signer = BitcoinSigner.fromWif(config.privateKey, getBitcoinNetwork());
   // Initialize a BitHive staker
   const staker = new BitHiveStaker(signer);
   // Stake 0.00005 BTC
