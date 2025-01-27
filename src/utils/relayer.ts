@@ -4,10 +4,7 @@ import { config } from './config';
 import { sleep } from './helper';
 import { BitcoinProvider } from './signer';
 
-import type {
-  Deposit as RelayerDeposit,
-  DepositStatus,
-} from '@bithive/relayer-api';
+import type { DepositStatus } from '@bithive/relayer-api';
 
 export type Deposit = {
   txHash: string;
@@ -18,74 +15,8 @@ export type Deposits = Deposit[] | string | string[];
 
 export type WithdrawalInput = Deposits | number;
 
-export type WaitOptions = {
-  timeout?: number;
-};
-
-type FeeOptions = {
-  fee?: number;
-  feeRate?: number;
-};
-
-type Operation = 'stake' | 'unstake' | 'withdraw';
-type DepositStatusType = 'success' | 'pending' | 'failure';
-type DepositStatusMap = {
-  [key in Operation]: {
-    [key in DepositStatusType]: DepositStatus[];
-  };
-};
-type OperationNameMap = {
-  [key in Operation]: {
-    do: string;
-    doing: string;
-    done: string;
-  };
-};
-
 // Create a relayer client
 export const relayer = createRelayerClient({ url: config.relayerRpcUrl });
-
-// Mapping of deposit status for each operation
-const DEPOSIT_STATUS_MAP: DepositStatusMap = {
-  stake: {
-    success: ['DepositConfirmed', 'DepositConfirmedInvalid'],
-    pending: ['DepositProcessing'],
-    failure: ['DepositFailed'],
-  },
-  unstake: {
-    success: ['UnstakeConfirmed'],
-    pending: ['UnstakeProcessing'],
-    failure: [],
-  },
-  withdraw: {
-    success: ['WithdrawConfirmed'],
-    pending: ['WithdrawChainSignProcessing', 'WithdrawProcessing'],
-    failure: ['WithdrawFailed'],
-  },
-};
-
-// Mapping of operation names
-const OPERATION_NAME_MAP: OperationNameMap = {
-  stake: {
-    do: 'stake',
-    doing: 'staking',
-    done: 'staked',
-  },
-  unstake: {
-    do: 'unstake',
-    doing: 'unstaking',
-    done: 'unstaked',
-  },
-  withdraw: {
-    do: 'withdraw',
-    doing: 'withdrawing',
-    done: 'withdrawn',
-  },
-};
-
-// Default wait interval and timeout
-const DEFAULT_WAIT_INTERVAL = 2 * 60 * 1000; // 2 minutes
-const DEFAULT_WAIT_TIMEOUT = 60 * 60 * 1000; // 1 hour
 
 /**
  * Stake BTC to BitHive
@@ -105,7 +36,10 @@ export async function stake(
   publicKey: string,
   address: string,
   amount: number,
-  options?: FeeOptions,
+  options?: {
+    fee?: number;
+    feeRate?: number;
+  },
 ) {
   // 1. Build the PSBT that is ready for signing
   const { psbt: unsignedPsbt } = await relayer.deposit.buildUnsignedPsbt({
@@ -192,7 +126,10 @@ export async function withdraw(
   publicKey: string,
   address: string,
   input: WithdrawalInput,
-  options?: FeeOptions,
+  options?: {
+    fee?: number;
+    feeRate?: number;
+  },
 ) {
   // Get the account info by public key
   const { account } = await relayer.user.getAccount({
@@ -270,6 +207,67 @@ export async function withdraw(
   };
 }
 
+export type WaitOptions = {
+  timeout?: number;
+};
+
+type Operation = 'stake' | 'unstake' | 'withdraw';
+type DepositStatusType = 'success' | 'pending' | 'failure';
+type DepositStatusMap = {
+  [key in Operation]: {
+    [key in DepositStatusType]: DepositStatus[];
+  };
+};
+type OperationNameMap = {
+  [key in Operation]: {
+    do: string;
+    doing: string;
+    done: string;
+  };
+};
+
+// Mapping of deposit status for each operation
+const DEPOSIT_STATUS_MAP: DepositStatusMap = {
+  stake: {
+    success: ['DepositConfirmed', 'DepositConfirmedInvalid'],
+    pending: ['DepositProcessing'],
+    failure: ['DepositFailed'],
+  },
+  unstake: {
+    success: ['UnstakeConfirmed'],
+    pending: ['UnstakeProcessing'],
+    failure: [],
+  },
+  withdraw: {
+    success: ['WithdrawConfirmed'],
+    pending: ['WithdrawChainSignProcessing', 'WithdrawProcessing'],
+    failure: ['WithdrawFailed'],
+  },
+};
+
+// Mapping of operation names
+const OPERATION_NAME_MAP: OperationNameMap = {
+  stake: {
+    do: 'stake',
+    doing: 'staking',
+    done: 'staked',
+  },
+  unstake: {
+    do: 'unstake',
+    doing: 'unstaking',
+    done: 'unstaked',
+  },
+  withdraw: {
+    do: 'withdraw',
+    doing: 'withdrawing',
+    done: 'withdrawn',
+  },
+};
+
+// Default wait interval and timeout
+const DEFAULT_WAIT_INTERVAL = 2 * 60 * 1000; // 2 minutes
+const DEFAULT_WAIT_TIMEOUT = 60 * 60 * 1000; // 1 hour
+
 /**
  * Wait until the operation is confirmed
  * @param operation The operation to wait for
@@ -284,8 +282,8 @@ async function waitForOperation(
   deposits: Deposits,
   { timeout = DEFAULT_WAIT_TIMEOUT }: WaitOptions = {},
 ) {
-  const statusMap = DEPOSIT_STATUS_MAP[operation];
-  const operationMap = OPERATION_NAME_MAP[operation];
+  const depositStatuses = DEPOSIT_STATUS_MAP[operation];
+  const operationNames = OPERATION_NAME_MAP[operation];
 
   const _deposits = parseDepositsInput(deposits);
   const data = await queryDeposits(publicKey, _deposits);
@@ -294,11 +292,11 @@ async function waitForOperation(
   }
 
   const invalidDeposit = data.find(
-    (deposit) => !statusMap.pending.includes(deposit.status),
+    (deposit) => !depositStatuses.pending.includes(deposit.status),
   );
   if (invalidDeposit) {
     throw Error(
-      `The deposit (${invalidDeposit.depositTxHash}) with status (${invalidDeposit.status}) hasn't started ${operationMap.doing}`,
+      `The deposit (${invalidDeposit.depositTxHash}) with status (${invalidDeposit.status}) hasn't started ${operationNames.doing}`,
     );
   }
 
@@ -316,7 +314,7 @@ async function waitForOperation(
 
       if (Date.now() - startTime > timeout) {
         throw Error(
-          `Waiting timeout ${timeout} ms reached for ${operationMap.doing} (${formattedDeposits})`,
+          `Waiting timeout ${timeout} ms reached for ${operationNames.doing} (${formattedDeposits})`,
         );
       }
 
@@ -328,26 +326,26 @@ async function waitForOperation(
       });
       const depositStatus = deposit.status;
 
-      if (statusMap.success.includes(depositStatus)) {
+      if (depositStatuses.success.includes(depositStatus)) {
         console.log(
-          `Deposit (${formattedDeposit}) has been ${operationMap.done} successfully`,
+          `Deposit (${formattedDeposit}) has been ${operationNames.done} successfully`,
         );
         count.success++;
         break;
-      } else if (statusMap.pending.includes(depositStatus)) {
+      } else if (depositStatuses.pending.includes(depositStatus)) {
         console.log(
-          `The deposit ${operationMap.doing} of (${formattedDeposit}) is under processing... Waiting for 2 minutes...`,
+          `The deposit ${operationNames.doing} of (${formattedDeposit}) is under processing... Waiting for 2 minutes...`,
         );
         await sleep(DEFAULT_WAIT_INTERVAL);
-      } else if (statusMap.failure.includes(depositStatus)) {
+      } else if (depositStatuses.failure.includes(depositStatus)) {
         console.error(
-          `Deposit (${formattedDeposit}) has failed to ${operationMap.do}`,
+          `Deposit (${formattedDeposit}) has failed to ${operationNames.do}`,
         );
         count.failure++;
         break;
       } else {
         console.error(
-          `Invalid status (${depositStatus}) for ${operationMap.doing} (${formattedDeposit})`,
+          `Invalid status (${depositStatus}) for ${operationNames.doing} (${formattedDeposit})`,
         );
         count.invalid++;
         break;
@@ -357,7 +355,7 @@ async function waitForOperation(
 
   if (_deposits.length > 1) {
     console.log(
-      `All ${_deposits.length} deposits ${operationMap.doing} have been processed. Success: ${count.success}, Failure: ${count.failure}, Invalid: ${count.invalid}`,
+      `All ${_deposits.length} deposits ${operationNames.doing} have been processed. Success: ${count.success}, Failure: ${count.failure}, Invalid: ${count.invalid}`,
     );
   }
 }
@@ -418,10 +416,7 @@ export async function waitUntilWithdrawn(
  * @param deposits A list of deposits with txHash and vout. If not specified, all deposits will be returned.
  * @returns List of deposits
  */
-export async function listDeposits(
-  publicKey: string,
-  deposits?: Deposits,
-): Promise<RelayerDeposit[]> {
+export async function listDeposits(publicKey: string, deposits?: Deposits) {
   if (!deposits) {
     const { deposits: _deposits } = await relayer.user.getDeposits({
       publicKey,
@@ -473,10 +468,7 @@ function parseDepositsInput(input: Deposits): Deposit[] {
  * @param deposits A list of deposits with txHash and vout
  * @returns List of deposits data
  */
-async function queryDeposits(
-  publicKey: string,
-  deposits: Deposit[],
-): Promise<RelayerDeposit[]> {
+async function queryDeposits(publicKey: string, deposits: Deposit[]) {
   const results = await Promise.all(
     deposits.map((deposit) =>
       relayer.user.getDeposit({
