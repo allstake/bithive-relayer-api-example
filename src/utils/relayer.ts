@@ -1,9 +1,7 @@
-import { createRelayerClient } from '@bithive/relayer-api';
-
 import { config } from './config';
 import { sleep } from './helper';
 import { BitcoinProvider } from './signer';
-
+import { createRelayerClient } from '@bithive/relayer-api';
 import type { DepositStatus } from '@bithive/relayer-api';
 
 export type Deposit = {
