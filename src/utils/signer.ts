@@ -100,12 +100,13 @@ export class BitcoinSigner implements BitcoinProvider {
   }
 
   private getAddressNestedSegwit(): string {
-    let payment = bitcoin.payments.p2wpkh({
+    const payment = bitcoin.payments.p2sh({
+      redeem: bitcoin.payments.p2wpkh({
+        pubkey: this.keyPair.publicKey,
+        network: this.network,
+      }),
       network: this.network,
-      pubkey: this.keyPair.publicKey,
     });
-
-    payment = bitcoin.payments.p2sh(payment);
 
     if (!payment.address) {
       throw Error('Bad P2SH payment');
