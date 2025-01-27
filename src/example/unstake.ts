@@ -2,10 +2,10 @@ import { config } from '../utils/config';
 import {
   stake,
   unstake,
-  withdraw,
   waitUntilStaked,
   waitUntilUnstaked,
   waitUntilWithdrawn,
+  withdraw,
 } from '../utils/relayer';
 import { BitcoinSigner } from '../utils/signer';
 import { getBitcoinNetwork, txUrl } from '../utils/helper';

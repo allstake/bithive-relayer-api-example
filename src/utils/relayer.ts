@@ -1,10 +1,8 @@
-import { createRelayerClient, DepositStatus } from '@bithive/relayer-api';
 import { config } from './config';
-import { BitcoinProvider } from './signer';
 import { sleep } from './helper';
-
-// Create a relayer client
-export const relayer = createRelayerClient({ url: config.relayerRpcUrl });
+import { BitcoinProvider } from './signer';
+import { createRelayerClient } from '@bithive/relayer-api';
+import type { DepositStatus } from '@bithive/relayer-api';
 
 export type Deposit = {
   txHash: string;
@@ -14,6 +12,9 @@ export type Deposit = {
 export type Deposits = Deposit[] | string | string[];
 
 export type WithdrawalInput = Deposits | number;
+
+// Create a relayer client
+export const relayer = createRelayerClient({ url: config.relayerRpcUrl });
 
 /**
  * Stake BTC to BitHive
@@ -61,7 +62,7 @@ export async function stake(
  * Unstake BTC from BitHive
  * @param provider BTC provider with `signMessage` interface
  * @param publicKey User public key (compressed)
- * @param input A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout
+ * @param input A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout, or the amount to unstake
  */
 export async function unstake(
   provider: BitcoinProvider,
@@ -114,7 +115,7 @@ export async function unstake(
  * @param provider BTC provider with `signPsbt` interface
  * @param publicKey User public key (compressed)
  * @param address Recipient address (can be different with user address)
- * @param input A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout
+ * @param input A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout, or the amount to withdraw
  * @param options Optional: specify the fee (in sats) or fee rate (in sat/vB) for the withdrawal transaction. If not specified, the fee will be calculated automatically.
  * @returns Withdrawal tx hash
  */
@@ -223,6 +224,7 @@ type OperationNameMap = {
   };
 };
 
+// Mapping of deposit status for each operation
 const DEPOSIT_STATUS_MAP: DepositStatusMap = {
   stake: {
     success: ['DepositConfirmed', 'DepositConfirmedInvalid'],
@@ -241,6 +243,7 @@ const DEPOSIT_STATUS_MAP: DepositStatusMap = {
   },
 };
 
+// Mapping of operation names
 const OPERATION_NAME_MAP: OperationNameMap = {
   stake: {
     do: 'stake',
@@ -277,18 +280,21 @@ async function waitForOperation(
   deposits: Deposits,
   { timeout = DEFAULT_WAIT_TIMEOUT }: WaitOptions = {},
 ) {
+  const depositStatuses = DEPOSIT_STATUS_MAP[operation];
+  const operationNames = OPERATION_NAME_MAP[operation];
+
   const _deposits = parseDepositsInput(deposits);
   const data = await queryDeposits(publicKey, _deposits);
   if (data.length === 0) {
     throw Error(`The deposits (${deposits}) are not found`);
   }
+
   const invalidDeposit = data.find(
-    (deposit) =>
-      !DEPOSIT_STATUS_MAP[operation].pending.includes(deposit.status),
+    (deposit) => !depositStatuses.pending.includes(deposit.status),
   );
   if (invalidDeposit) {
     throw Error(
-      `The deposit (${invalidDeposit.depositTxHash}) with status (${invalidDeposit.status}) hasn't started ${OPERATION_NAME_MAP[operation].doing}`,
+      `The deposit (${invalidDeposit.depositTxHash}) with status (${invalidDeposit.status}) hasn't started ${operationNames.doing}`,
     );
   }
 
@@ -298,13 +304,18 @@ async function waitForOperation(
     invalid: 0,
   };
   const startTime = Date.now();
+
   for (const _deposit of _deposits) {
     while (true) {
+      const formattedDeposits = formatDeposits(_deposits);
+      const formattedDeposit = formatDeposit(_deposit);
+
       if (Date.now() - startTime > timeout) {
         throw Error(
-          `Waiting timeout ${timeout} ms reached for ${OPERATION_NAME_MAP[operation].doing} (${formatDeposits(_deposits)})`,
+          `Waiting timeout ${timeout} ms reached for ${operationNames.doing} (${formattedDeposits})`,
         );
       }
+
       // Get deposit by public key and deposit tx hash and vout
       const { deposit } = await relayer.user.getDeposit({
         publicKey,
@@ -313,39 +324,36 @@ async function waitForOperation(
       });
       const depositStatus = deposit.status;
 
-      if (DEPOSIT_STATUS_MAP[operation].success.includes(depositStatus)) {
+      if (depositStatuses.success.includes(depositStatus)) {
         console.log(
-          `Deposit (${formatDeposit(_deposit)}) has been ${OPERATION_NAME_MAP[operation].done} successfully`,
+          `Deposit (${formattedDeposit}) has been ${operationNames.done} successfully`,
         );
         count.success++;
         break;
-      } else if (
-        DEPOSIT_STATUS_MAP[operation].pending.includes(depositStatus)
-      ) {
+      } else if (depositStatuses.pending.includes(depositStatus)) {
         console.log(
-          `The deposit ${OPERATION_NAME_MAP[operation].doing} of (${formatDeposit(_deposit)}) is under processing... Waiting for 2 minutes...`,
+          `The deposit ${operationNames.doing} of (${formattedDeposit}) is under processing... Waiting for 2 minutes...`,
         );
         await sleep(DEFAULT_WAIT_INTERVAL);
-      } else if (
-        DEPOSIT_STATUS_MAP[operation].failure.includes(depositStatus)
-      ) {
+      } else if (depositStatuses.failure.includes(depositStatus)) {
         console.error(
-          `Deposit (${formatDeposit(_deposit)}) has failed to ${OPERATION_NAME_MAP[operation].do}`,
+          `Deposit (${formattedDeposit}) has failed to ${operationNames.do}`,
         );
         count.failure++;
         break;
       } else {
         console.error(
-          `Invalid status (${depositStatus}) for ${OPERATION_NAME_MAP[operation].doing} (${formatDeposit(_deposit)})`,
+          `Invalid status (${depositStatus}) for ${operationNames.doing} (${formattedDeposit})`,
         );
         count.invalid++;
         break;
       }
     }
   }
+
   if (_deposits.length > 1) {
     console.log(
-      `All ${_deposits.length} deposits ${OPERATION_NAME_MAP[operation].doing} have been processed. Success: ${count.success}, Failure: ${count.failure}, Invalid: ${count.invalid}`,
+      `All ${_deposits.length} deposits ${operationNames.doing} have been processed. Success: ${count.success}, Failure: ${count.failure}, Invalid: ${count.invalid}`,
     );
   }
 }
@@ -381,12 +389,8 @@ export async function waitUntilUnstaked(
 
   if (deposits) {
     return waitForOperation('unstake', publicKey, deposits, { timeout });
-  } else {
-    return relayer.unstake.waitUntilConfirmed(
-      { amount, publicKey },
-      { timeout },
-    );
   }
+  return relayer.unstake.waitUntilConfirmed({ amount, publicKey }, { timeout });
 }
 
 /**
@@ -416,9 +420,26 @@ export async function listDeposits(publicKey: string, deposits?: Deposits) {
       publicKey,
     });
     return _deposits;
-  } else {
-    return await queryDeposits(publicKey, parseDepositsInput(deposits));
   }
+  return await queryDeposits(publicKey, parseDepositsInput(deposits));
+}
+
+/**
+ * Parse the withdrawal input
+ * @param input A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout, or the amount to withdraw
+ * @returns Partial object with amount or deposits
+ */
+export function parseWithdrawalInput(input: WithdrawalInput): Partial<{
+  amount: number;
+  deposits: Deposits;
+}> {
+  if (typeof input === 'number') {
+    if (input <= 0) {
+      throw Error('The amount must be positive');
+    }
+    return { amount: input, deposits: undefined };
+  }
+  return { amount: undefined, deposits: input };
 }
 
 /**
@@ -458,29 +479,26 @@ async function queryDeposits(publicKey: string, deposits: Deposit[]) {
   return results.map((result) => result.deposit);
 }
 
-function formatDeposit(deposit: Deposit) {
+/**
+ * Format the deposit to string
+ * @param deposit Deposit with txHash and vout
+ * @returns The formatted deposit string
+ */
+function formatDeposit(deposit: Deposit): string {
   if (deposit.vout === 0) {
     return deposit.txHash;
-  } else {
-    return `${deposit.txHash}:${deposit.vout}`;
   }
+  return `${deposit.txHash}:${deposit.vout}`;
 }
 
-function formatDeposits(deposits: Deposit[] | Deposit) {
+/**
+ * Format the deposits to string
+ * @param deposits A list of deposits with txHash and vout
+ * @returns The formatted deposits string
+ */
+function formatDeposits(deposits: Deposit[] | Deposit): string {
   if (Array.isArray(deposits)) {
     return deposits.map(formatDeposit).join(', ');
-  } else {
-    return formatDeposit(deposits);
   }
-}
-
-export function parseWithdrawalInput(input: WithdrawalInput) {
-  if (typeof input === 'number') {
-    if (input <= 0) {
-      throw Error('The amount must be positive');
-    }
-    return { amount: input, deposits: undefined };
-  } else {
-    return { amount: undefined, deposits: input };
-  }
+  return formatDeposit(deposits);
 }

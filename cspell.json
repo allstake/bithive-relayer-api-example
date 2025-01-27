@@ -1,0 +1,39 @@
+{
+    "version": "0.2",
+    "language": "en",
+    "dictionaries": [
+      "customDictionary",
+      "typescript",
+      "javascript",
+      "html",
+      "css",
+      "json"
+    ],
+    "ignoreWords": [
+      "TODO",
+      "FIXME",
+      "xxx"
+    ],
+    "ignorePaths": [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/*.min.js",
+      "**/*.d.ts"
+    ],
+    "enableFiletypes": [
+      "javascript",
+      "typescript",
+      "html",
+      "css",
+      "json",
+      "markdown"
+    ],
+    "words": [
+      "React",
+      "Node.js",
+      "TypeScript",
+      "VSCode",
+      "bitcoinjs",
+      "unstake"
+    ]
+  }
