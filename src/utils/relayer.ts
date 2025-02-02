@@ -26,7 +26,9 @@ export const relayer = createRelayerClient({ url: config.relayerRpcUrl });
  * - Taproot       (P2TR)
  * - Legacy        (P2PKH)
  * @param amount Bitcoin amount (in sats) that is within the valid scope. e.g. between 0.00005 and 0.01 BTC. 5000 means 0.00005 BTC
- * @param options Optional: specify the fee (in sats) or fee rate (in sat/vB) for the staking transaction. If not specified, the fee will be calculated automatically.
+ * @param options Fee related options
+ * - fee / feeRate: specify the fee (in sats) or fee rate (in sat/vB) for the staking transaction. If not specified, the fee will be calculated automatically.
+ * - feeLimit: fee limit of the staking transaction
  * @returns Staking tx hash
  */
 export async function stake(
@@ -37,6 +39,7 @@ export async function stake(
   options?: {
     fee?: number;
     feeRate?: number;
+    feeLimit?: number;
   },
 ) {
   // 1. Build the PSBT that is ready for signing
@@ -116,7 +119,9 @@ export async function unstake(
  * @param publicKey User public key (compressed)
  * @param address Recipient address (can be different with user address)
  * @param input A single deposit tx hash, or list of deposit tx hashes, or list of deposits with txHash and vout, or the amount to withdraw
- * @param options Optional: specify the fee (in sats) or fee rate (in sat/vB) for the withdrawal transaction. If not specified, the fee will be calculated automatically.
+ * @param options Fee related options
+ * - fee / feeRate: specify the fee (in sats) or fee rate (in sat/vB) for the withdrawal transaction. If not specified, the fee will be calculated automatically.
+ * - feeLimit: fee limit of the withdrawal transaction
  * @returns Withdrawal tx hash
  */
 export async function withdraw(
@@ -127,6 +132,7 @@ export async function withdraw(
   options?: {
     fee?: number;
     feeRate?: number;
+    feeLimit?: number;
   },
 ) {
   // Get the account info by public key
