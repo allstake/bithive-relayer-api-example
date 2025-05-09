@@ -198,6 +198,7 @@ export async function withdraw(
   // 3. Sign the PSBT with NEAR Chain Signatures
   const { psbt: fullySignedPsbt } = await relayer.withdraw.chainSignPsbt({
     psbt: partiallySignedPsbt!,
+    psbtIndex: account.pendingSignPsbts.length > 0 ? 0 : undefined,
   });
 
   // 4. Submit the finalized PSBT for broadcasting and relaying
