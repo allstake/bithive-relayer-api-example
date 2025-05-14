@@ -143,14 +143,14 @@ export async function withdraw(
   let partiallySignedPsbt: string | undefined = undefined;
   let withdrawnDeposits;
 
-  if (account.pendingSignPsbt) {
-    // If there's a pending PSBT for signing, user cannot request signing a new PSBT
-    partiallySignedPsbt = account.pendingSignPsbt.psbt;
-    withdrawnDeposits = account.pendingSignPsbt.deposits;
+  if (account.pendingSignPsbts.length > 0) {
+    // If there're pending PSBTs for signing, we will finish signing the pending PSBTs before signing a new one
+    partiallySignedPsbt = account.pendingSignPsbts[0].psbt;
+    withdrawnDeposits = account.pendingSignPsbts[0].deposits;
     console.warn(
-      `[Warning] The account with public key (${publicKey}) has a pending withdrawal PSBT that has not been signed by NEAR Chain Signatures. ` +
+      `[Warning] The account with public key (${publicKey}) has ${account.pendingSignPsbts.length} pending withdrawal PSBTs that have not been signed by NEAR Chain Signatures. ` +
         `The signing request is either still in progress or has failed in the last attempt. ` +
-        `We need to complete signing this withdrawal PSBT before we can submit a new one: ${JSON.stringify(account.pendingSignPsbt, null, 2)}.\n` +
+        `We need to complete signing this withdrawal PSBT before we can submit a new one: ${JSON.stringify(account.pendingSignPsbts[0], null, 2)}.\n` +
         `Submit the above withdrawal PSBT for signing ... This may fail if the last signing request is still in progress, or NEAR Chain Signatures service is unstable.`,
     );
   } else {
@@ -198,6 +198,7 @@ export async function withdraw(
   // 3. Sign the PSBT with NEAR Chain Signatures
   const { psbt: fullySignedPsbt } = await relayer.withdraw.chainSignPsbt({
     psbt: partiallySignedPsbt!,
+    psbtIndex: account.pendingSignPsbts.length > 0 ? 0 : undefined,
   });
 
   // 4. Submit the finalized PSBT for broadcasting and relaying
